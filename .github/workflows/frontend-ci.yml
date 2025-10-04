@@ -1,0 +1,209 @@
+name: Fastie.Saigon Frontend CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  # Client App (Fastie.Saigon Customer App - Port 3000)
+  client-app:
+    name: Client App CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/client
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: frontend/client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint || echo "No lint script found"
+        continue-on-error: true
+
+      - name: Run tests
+        run: npm test -- --coverage --watchAll=false
+        env:
+          CI: true
+
+      - name: Build application
+        run: npm run build
+        env:
+          CI: false
+          REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL || 'http://localhost:4000' }}
+          REACT_APP_STRIPE_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_STRIPE_PUBLISHABLE_KEY }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-build-${{ matrix.node-version }}
+          path: frontend/client/build
+          retention-days: 7
+
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-coverage-${{ matrix.node-version }}
+          path: frontend/client/coverage
+          retention-days: 7
+
+  # Admin App (SuperAdmin Frontend - Port 3001)
+  admin-app:
+    name: Admin App CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/admin
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: frontend/admin/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint || echo "No lint script found"
+        continue-on-error: true
+
+      - name: Run tests
+        run: npm test -- --coverage --watchAll=false
+        env:
+          CI: true
+
+      - name: Build application
+        run: npm run build
+        env:
+          CI: false
+          REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL || 'http://localhost:4000' }}
+          REACT_APP_STRIPE_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_STRIPE_PUBLISHABLE_KEY }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-build-${{ matrix.node-version }}
+          path: frontend/admin/build
+          retention-days: 7
+
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-coverage-${{ matrix.node-version }}
+          path: frontend/admin/coverage
+          retention-days: 7
+
+  # Restaurant App (Restaurant Admin Frontend - Port 3002)
+  restaurant-app:
+    name: Restaurant App CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/restaurant
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: frontend/restaurant/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint || echo "No lint script found"
+        continue-on-error: true
+
+      - name: Run tests
+        run: npm test -- --coverage --watchAll=false
+        env:
+          CI: true
+
+      - name: Build application
+        run: npm run build
+        env:
+          CI: false
+          REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL || 'http://localhost:4000' }}
+          REACT_APP_STRIPE_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_STRIPE_PUBLISHABLE_KEY }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: restaurant-build-${{ matrix.node-version }}
+          path: frontend/restaurant/build
+          retention-days: 7
+
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: restaurant-coverage-${{ matrix.node-version }}
+          path: frontend/restaurant/coverage
+          retention-days: 7
+
+  # Optional: Deploy job (runs only on main branch)
+  deploy-preview:
+    name: Deploy Preview
+    needs: [client-app, admin-app, restaurant-app]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R ./artifacts
+
+      - name: Deploy to staging
+        run: |
+          echo "🚀 Ready to deploy to staging environment"
+          echo "Client app build available"
+          echo "Admin app build available"
+          echo "Restaurant app build available"
+          # Add your deployment commands here
+          # Example: Deploy to Netlify, Vercel, AWS S3, etc.
