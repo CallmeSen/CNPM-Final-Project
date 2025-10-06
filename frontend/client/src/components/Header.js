@@ -1,15 +1,17 @@
 // src/components/Header.jsx
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";      // profile icon
 import "../styles/header.css";
 import Sidebar from "./Sidebar";
+import { CartContext } from "../pages/contexts/CartContext";
 
 function Header() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isLoggedIn, setLoggedIn] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const { clearCart } = useContext(CartContext);
   const navigate = useNavigate();
   const dropdownRef = useRef();
 
@@ -33,7 +35,19 @@ function Header() {
   const toggleSidebar = () => setSidebarOpen(open => !open);
 
   const handleLogout = () => {
+    // Clear cart for current user
+    clearCart();
+    
+    // Remove token
     localStorage.removeItem("token");
+    
+    // Clear all user-specific cart data from localStorage
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('cart_')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
     setLoggedIn(false);
     setShowDropdown(false);
     navigate("/");  // redirect home

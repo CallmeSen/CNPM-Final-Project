@@ -25,6 +25,10 @@ export default function AuthRegister() {
     try {
       const res = await axios.post("http://localhost:5001/api/auth/register/customer", form);
       localStorage.setItem("token", res.data.token);
+      
+      // Trigger storage event to reload cart for new user
+      window.dispatchEvent(new Event('storage'));
+      
       navigate("/");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
