@@ -2,12 +2,12 @@ name: Fastie.Saigon Frontend CI/CD
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, phase-1]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yml'
   pull_request:
-    branches: [main, develop]
+    branches: [main, phase-1]
     paths:
       - 'frontend/**'
 
@@ -22,7 +22,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 24.x]
+        node-version: [24.x]
 
     steps:
       - name: Checkout code
