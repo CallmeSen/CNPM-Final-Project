@@ -2,11 +2,19 @@ name: Fastie.Saigon Code Quality & Security
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - phase-1
+      - phase-2
+      - phase-3
+      - phase-4
+      - phase-5
+      - source
     paths:
       - 'frontend/**'
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
     paths:
       - 'frontend/**'
   schedule:

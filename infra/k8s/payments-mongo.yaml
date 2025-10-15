@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: payments-mongo-statefulset
+spec:
+  serviceName: payments-mongo-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payments-mongo
+  template:
+    metadata:
+      labels:
+        app: payments-mongo
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: payments-mongo
+        image: mongo
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: payments-mongo-persistent-storage
+          mountPath: /home/ubuntu/payments-mongo
+  volumeClaimTemplates:
+  - metadata:
+      name: payments-mongo-persistent-storage
+      annotations:
+        volume.beta.kubernetes.io/storage-class: "gp2"
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 0.5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments-mongo-service
+spec:
+  selector:
+    app: payments-mongo
+  ports:
+  - name: db
+    protocol: TCP
+    port: 27017
+    targetPort: 27017

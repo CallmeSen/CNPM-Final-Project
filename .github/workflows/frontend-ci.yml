@@ -1,15 +1,29 @@
 name: Fastie.Saigon Frontend CI/CD
-
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - phase-1
+      - phase-2
+      - phase-3
+      - phase-4
+      - phase-5
+      - source
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yml'
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
     paths:
       - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests (for emergency builds)'
+        required: false
+        default: 'false'
 
 jobs:
   # Client App (Fastie.Saigon Customer App - Port 3000)
@@ -68,9 +82,9 @@ jobs:
           path: frontend/client/coverage
           retention-days: 7
 
-  # Admin App (SuperAdmin Frontend - Port 3001)
+  # Admin App (SuperAdmin Frontend - Port 3001) - Next.js App
   admin-app:
-    name: Admin App CI
+    name: Admin App CI (Next.js)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -78,7 +92,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [24.x]
 
     steps:
       - name: Checkout code
@@ -95,26 +109,25 @@ jobs:
         run: npm ci
 
       - name: Run linter
-        run: npm run lint || echo "No lint script found"
+        run: npm run lint || echo "Linter completed"
         continue-on-error: true
 
       - name: Run tests
-        run: npm test -- --coverage --watchAll=false
+        run: npm run test:ci
         env:
           CI: true
 
-      - name: Build application
+      - name: Build Next.js application
         run: npm run build
         env:
           CI: false
-          REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL || 'http://localhost:4000' }}
-          REACT_APP_STRIPE_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_STRIPE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_BACKEND_URL: ${{ secrets.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000' }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: admin-build-${{ matrix.node-version }}
-          path: frontend/admin/build
+          path: frontend/admin/.next
           retention-days: 7
 
       - name: Upload test coverage

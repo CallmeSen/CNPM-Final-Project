@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+
+  delivery-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: delivery-service
+    restart: unless-stopped
+    ports:
+      - "5003:5003"
+    environment:
+      # In local dev we point at our local mongo container:
+      - MONGO_URI=mongodb://localhost:28017/Delivery
+      # - MONGO_URI=mongodb://mongo:27017/Delivery
+      - PORT=5003
+      - JWT_SECRET=<jwt-secret-redacted>

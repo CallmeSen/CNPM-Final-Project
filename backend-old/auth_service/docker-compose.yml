@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth-service
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      # In local dev we point at our local mongo container:
+      - MONGO_URI=mongodb://localhost:28017/Auth
+      # - MONGO_URI=mongodb://mongo:27017/Auth
+      - PORT=4000
+      - JWT_SECRET=<jwt-secret-redacted>
+      - JWT_EXPIRES_IN=7d
