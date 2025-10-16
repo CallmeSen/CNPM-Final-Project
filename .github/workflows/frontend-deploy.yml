@@ -1,4 +1,4 @@
-name: Fastie.Saigon Production Deployment
+name: frontend-deploy
 
 on:
   release:

@@ -1,4 +1,4 @@
-name: Fastie.Saigon Code Quality & Security
+name: frontend-quality
 
 on:
   push:
