@@ -1,0 +1,180 @@
+name: Fastie.Saigon Code Quality & Security
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+  schedule:
+    # Run security checks weekly on Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+
+jobs:
+  code-quality:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full git history for better analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      # Client App Quality
+      - name: Check Client App Dependencies
+        working-directory: frontend/client
+        run: |
+          npm ci
+          echo "📊 Checking for outdated packages..."
+          npm outdated || true
+
+      # Admin App Quality
+      - name: Check Admin App Dependencies
+        working-directory: frontend/admin
+        run: |
+          npm ci
+          echo "📊 Checking for outdated packages..."
+          npm outdated || true
+
+      # Restaurant App Quality
+      - name: Check Restaurant App Dependencies
+        working-directory: frontend/restaurant
+        run: |
+          npm ci
+          echo "📊 Checking for outdated packages..."
+          npm outdated || true
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Security Audit - Client App
+        working-directory: frontend/client
+        run: |
+          npm ci
+          echo "🔒 Running security audit for Client App..."
+          npm audit --audit-level=moderate || true
+          npm audit fix --dry-run || true
+
+      - name: Security Audit - Admin App
+        working-directory: frontend/admin
+        run: |
+          npm ci
+          echo "🔒 Running security audit for Admin App..."
+          npm audit --audit-level=moderate || true
+          npm audit fix --dry-run || true
+
+      - name: Security Audit - Restaurant App
+        working-directory: frontend/restaurant
+        run: |
+          npm ci
+          echo "🔒 Running security audit for Restaurant App..."
+          npm audit --audit-level=moderate || true
+          npm audit fix --dry-run || true
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+
+  bundle-size-check:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Build and Check Client Bundle Size
+        working-directory: frontend/client
+        run: |
+          npm ci
+          npm run build
+          echo "📦 Client App Bundle Size:"
+          du -sh build/
+          du -sh build/static/js/*.js | sort -h
+
+      - name: Build and Check Admin Bundle Size
+        working-directory: frontend/admin
+        run: |
+          npm ci
+          npm run build
+          echo "📦 Admin App Bundle Size:"
+          du -sh build/
+          du -sh build/static/js/*.js | sort -h
+
+      - name: Build and Check Restaurant Bundle Size
+        working-directory: frontend/restaurant
+        run: |
+          npm ci
+          npm run build
+          echo "📦 Restaurant App Bundle Size:"
+          du -sh build/
+          du -sh build/static/js/*.js | sort -h
+
+  code-format-check:
+    name: Code Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Check code formatting
+        run: |
+          echo "✨ Checking code formatting..."
+          echo "Note: Add prettier or eslint configuration to enforce formatting"
+          # npm run format:check || echo "No format check script found"
+
+  lint-dockerfiles:
+    name: Lint Dockerfiles
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint Dockerfiles
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: frontend/*/Dockerfile
+          recursive: true
+          ignore: DL3008,DL3009

@@ -1,4 +1,4 @@
-name: frontend-ci
+name: Fastie.Saigon Frontend CI/CD
 on:
   push:
     branches:
