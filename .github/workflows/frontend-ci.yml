@@ -36,7 +36,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: ['24.8.0']
 
     steps:
       - name: Checkout code
@@ -92,7 +92,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [24.x]
+        node-version: ['24.8.0']
 
     steps:
       - name: Checkout code
@@ -147,7 +147,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [24.x]
+        node-version: ['24.8.0']
 
     steps:
       - name: Checkout code
@@ -193,30 +193,3 @@ jobs:
           path: frontend/restaurant/coverage
           retention-days: 7
 
-  # Optional: Deploy job (runs only on main branch)
-  deploy-preview:
-    name: Deploy Preview
-    needs: [client-app, admin-app, restaurant-app]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./artifacts
-
-      - name: Display structure of downloaded files
-        run: ls -R ./artifacts
-
-      - name: Deploy to staging
-        run: |
-          echo "🚀 Ready to deploy to staging environment"
-          echo "Client app build available"
-          echo "Admin app build available"
-          echo "Restaurant app build available"
-          # Add your deployment commands here
-          # Example: Deploy to Netlify, Vercel, AWS S3, etc.
