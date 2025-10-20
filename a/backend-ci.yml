@@ -177,7 +177,7 @@ jobs:
           echo "Build successful - dist directory exists"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: auth-service-build-${{ matrix.node-version }}
           path: backend/auth-service/dist
@@ -254,7 +254,7 @@ jobs:
           echo "Build successful"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: order-service-build-${{ matrix.node-version }}
           path: backend/order-service/dist
@@ -349,7 +349,7 @@ jobs:
           echo "Build successful"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: payment-service-build-${{ matrix.node-version }}
           path: backend/payment-service/dist
@@ -357,7 +357,7 @@ jobs:
 
       - name: Upload test artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: payment-service-test-results-${{ matrix.node-version }}
           path: backend/payment-service/coverage
@@ -434,7 +434,7 @@ jobs:
           echo "Build successful"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: restaurant-service-build-${{ matrix.node-version }}
           path: backend/restaurant-service/dist
