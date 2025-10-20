@@ -92,8 +92,10 @@ const FoodItemList = () => {
     }));
   };
 
+  const normalizedRestaurantId = Array.isArray(restaurantId) ? restaurantId[0] : restaurantId ?? null;
+
   const handleAddToCart = (food: FoodItem) => {
-    addToCart(food, restaurantId ?? null);
+    addToCart(food, normalizedRestaurantId ?? null);
     setToastMessage(`${food.name} added to cart!`);
     setShowToast(true);
     setTimeout(() => {

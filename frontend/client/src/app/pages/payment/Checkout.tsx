@@ -216,6 +216,19 @@ const CheckoutContent = ({ stripeEnabled }: { stripeEnabled: boolean }) => {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethodOption | null>(null);
   const [customerProfile, setCustomerProfile] = useState<CustomerProfile | null>(null);
 
+  // Check authentication and redirect to login if not authenticated
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      // Save current path to return after login
+      router.push("/auth/login?redirect=/checkout");
+    }
+  }, [router]);
+
   const totalPrice = useMemo(() => {
     const amount = order?.totalPrice ?? 0;
     return Number.isFinite(amount) ? amount : 0;

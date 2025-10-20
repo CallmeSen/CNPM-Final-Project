@@ -77,7 +77,10 @@ const OrderForm = ({ addOrder }: OrderFormProps) => {
     return "";
   };
 
-  const handleItemChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleItemChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
     const newItems = [...order.items];
     newItems[index] = { ...newItems[index], [name]: value };
