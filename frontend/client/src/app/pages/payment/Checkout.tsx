@@ -1,12 +1,13 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, FormEvent, useContext } from "react";
 import { CardNumberElement, CardExpiryElement, CardCvcElement, Elements, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe, StripeCardNumberElementChangeEvent } from "@stripe/stripe-js";
 import axios from "axios";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { buildAuthServiceUrl } from "@/config/api";
+import { CartContext } from "../contexts/CartContext";
 import styles from "../../styles/checkout.module.css";
 
 const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
@@ -284,12 +285,31 @@ const CheckoutContent = ({ stripeEnabled }: { stripeEnabled: boolean }) => {
 
   if (!order || !order.items || order.items.length === 0) {
     return (
-      <div className={styles.checkoutFallback}>
-        <h1>No Order Found</h1>
-        <p>Please add items to your cart before checking out.</p>
-        <Link href="/" className={styles.backLink}>
-          Browse restaurants
-        </Link>
+      <div className={styles.emptyCheckoutWrapper}>
+        <div className={styles.emptyCheckoutCard}>
+          <div className={styles.emptyCartIcon}>
+            <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="60" cy="60" r="60" fill="#F0F4F8"/>
+              <path d="M40 45C40 43.8954 40.8954 43 42 43H78C79.1046 43 80 43.8954 80 45V75C80 76.1046 79.1046 77 78 77H42C40.8954 77 40 76.1046 40 75V45Z" stroke="#94A3B8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M50 43V40C50 34.4772 54.4772 30 60 30C65.5228 30 70 34.4772 70 40V43" stroke="#94A3B8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M45 60L55 70L75 50" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" opacity="0.3"/>
+            </svg>
+          </div>
+          <h1 className={styles.emptyCartTitle}>Your Cart is Empty</h1>
+          <p className={styles.emptyCartDescription}>
+            Looks like you haven&apos;t added any items to your cart yet. 
+            Browse our delicious menu and find something you love!
+          </p>
+          <div className={styles.emptyCartActions}>
+            <Link href="/" className={styles.primaryButton}>
+              <span className={styles.buttonIcon}>🍽️</span>
+              Explore Restaurants
+            </Link>
+            <Link href="/customer/order-history" className={styles.secondaryButton}>
+              View Order History
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -442,6 +462,7 @@ const CashPaymentSection = ({
   onBack: () => void;
 }) => {
   const router = useRouter();
+  const { clearCart } = useContext(CartContext);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
@@ -477,7 +498,8 @@ const CashPaymentSection = ({
         }
       );
 
-      // Clear cart
+      // Clear cart from CartContext and localStorage
+      clearCart();
       if (typeof window !== "undefined") {
         ["pendingOrder", "cart", "cart_guest"].forEach((key) => {
           try {
@@ -554,6 +576,7 @@ const StripePaymentSection = ({
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
+  const { clearCart } = useContext(CartContext);
 
   const [clientSecret, setClientSecret] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -708,7 +731,8 @@ const StripePaymentSection = ({
             }
           );
 
-          // Clear cart
+          // Clear cart from CartContext and localStorage
+          clearCart();
           if (typeof window !== "undefined") {
             ["pendingOrder", "cart", "cart_guest"].forEach((key) => {
               try {
