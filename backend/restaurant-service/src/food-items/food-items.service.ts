@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FoodItem, FoodItemDocument } from '../schema/food-item.schema';
 import { Restaurant, RestaurantDocument } from '../schema/restaurant.schema';
+import { buildPublicFilePath } from '../common/config/multer.config';
 import { CreateFoodItemDto } from './dto/create-food-item.dto';
 import { UpdateFoodItemDto } from './dto/update-food-item.dto';
 
@@ -18,7 +19,6 @@ export class FoodItemsService {
     @InjectModel(Restaurant.name)
     private restaurantModel: Model<RestaurantDocument>,
   ) {}
-
   async create(
     restaurantId: string,
     dto: CreateFoodItemDto,
@@ -29,13 +29,16 @@ export class FoodItemsService {
       throw new NotFoundException('Restaurant not found');
     }
 
+
+    const imagePath = file ? buildPublicFilePath(file.filename) : undefined;
+
     const foodItem = new this.foodItemModel({
       restaurant: restaurantId,
       name: dto.name,
       description: dto.description,
       price: dto.price,
       category: dto.category,
-      image: file ? `/uploads/${file.filename}` : undefined,
+      image: imagePath,
     });
 
     await foodItem.save();
@@ -74,9 +77,9 @@ export class FoodItemsService {
       );
     }
 
-    const updateData: any = { ...dto };
+    const updateData: Record<string, unknown> = { ...dto };
     if (file) {
-      updateData.image = `/uploads/${file.filename}`;
+      updateData.image = buildPublicFilePath(file.filename);
     }
 
     const updated = await this.foodItemModel.findByIdAndUpdate(id, updateData, {
