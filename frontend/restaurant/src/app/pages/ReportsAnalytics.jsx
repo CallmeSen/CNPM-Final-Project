@@ -10,7 +10,7 @@ import React, {
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useRouter } from 'next/navigation';
-import RestaurantSidebar from '../components/RestaurantSidebar';
+import DashboardSidebar from '../components/DashboardSidebar';
 import '../styles/rdashboard.css';
 import '../styles/reports.css';
 
@@ -28,7 +28,6 @@ function ReportsAnalytics() {
   const [revenueData, setRevenueData] = useState([]);
   const [topItems, setTopItems] = useState([]);
   const [reviews, setReviews] = useState([]);
-  const [restaurantName, setRestaurantName] = useState('');
   const [summary, setSummary] = useState({
     totalRevenue: 0,
     totalOrders: 0,
@@ -36,30 +35,9 @@ function ReportsAnalytics() {
     averageRating: 0,
   });
 
-  const fetchRestaurantProfile = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/restaurant/profile', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRestaurantName(data.name);
-      }
-    } catch (err) {
-      console.error('Error fetching profile:', err);
-    }
-  }, [router]);
-
   const fetchReportsData = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       const headers = {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -100,6 +78,7 @@ function ReportsAnalytics() {
       setReviews(reviewsData ?? []);
       setSummary(summaryData ?? {});
     } catch (error) {
+      console.error('Error fetching reports:', error);
       setRevenueData([]);
       setTopItems([]);
       setReviews([]);
@@ -110,12 +89,11 @@ function ReportsAnalytics() {
         averageRating: 0,
       });
     }
-  }, [period, startDate, endDate, router]);
+  }, [period, startDate, endDate]);
 
   useEffect(() => {
-    fetchRestaurantProfile();
     fetchReportsData();
-  }, [fetchRestaurantProfile, fetchReportsData]);
+  }, [fetchReportsData]);
 
   const currencyFormatter = useMemo(
     () =>
@@ -164,6 +142,51 @@ function ReportsAnalytics() {
     ],
     [currencyFormatter, summary],
   );
+
+  const sidebarNavItems = useMemo(
+    () => [
+      {
+        key: 'profile',
+        label: 'Profile',
+        icon: '👤',
+        path: '/dashboard',
+        tab: 'profile',
+      },
+      {
+        key: 'foodItems',
+        label: 'Food Items',
+        icon: '🍽️',
+        path: '/dashboard',
+        tab: 'foodItems',
+      },
+      {
+        key: 'availability',
+        label: 'Availability',
+        icon: '📅',
+        path: '/dashboard',
+        tab: 'availability',
+      },
+      { key: 'reports', label: 'Reports', icon: '📊', path: '/reports' },
+    ],
+    [],
+  );
+
+  const handleNavigate = useCallback(
+    (item) => {
+      if (item.tab) {
+        localStorage.setItem('dashboard:tab', item.tab);
+      }
+      if (item.path) {
+        router.push(item.path);
+      }
+    },
+    [router],
+  );
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token');
+    router.push('/');
+  }, [router]);
 
   const exportToPDF = () => {
     const doc = new jsPDF();
@@ -271,7 +294,31 @@ function ReportsAnalytics() {
 
   return (
     <div className="dashboard-container reports-dashboard">
-      <RestaurantSidebar activeKey="reports" userName={restaurantName} />
+      <DashboardSidebar
+        activeKey="reports"
+        navItems={sidebarNavItems}
+        onSelect={handleNavigate}
+        header={
+          <div className="sidebar-header">
+            <div className="sidebar-logo">{'\u{1F37D}\u{FE0F}'}</div>
+            <h2>Insights Hub</h2>
+            <p className="sidebar-tagline">
+              Monitor performance and spot trends quickly.
+            </p>
+          </div>
+        }
+        footer={
+          <div className="sidebar-footer">
+            <button
+              type="button"
+              className="logout-btn"
+              onClick={handleLogout}
+            >
+              Log out
+            </button>
+          </div>
+        }
+      />
 
       <div className="dashboard-content reports-content">
 

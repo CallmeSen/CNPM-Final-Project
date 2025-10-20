@@ -1,8 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import "../../styles/auth-register.css";
 const AuthRegister = () => {
@@ -17,8 +16,7 @@ const AuthRegister = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -55,14 +53,7 @@ const AuthRegister = () => {
         localStorage.removeItem("customerName");
       }
       window.dispatchEvent(new Event("storage"));
-      
-      // Check if there's a redirect parameter
-      const redirectPath = searchParams.get("redirect");
-      if (redirectPath) {
-        router.push(redirectPath);
-      } else {
-        router.push("/");
-      }
+      navigate("/");
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.message ?? "Registration failed");
@@ -113,7 +104,7 @@ const AuthRegister = () => {
       <div className="auth-register-form-side">
         <div className="auth-register-form-container">
           <div className="auth-register-back-link">
-            <Link href="/" className="auth-register-back-btn">
+            <Link to="/" className="auth-register-back-btn">
               Back to Home
             </Link>
           </div>
@@ -222,11 +213,11 @@ const AuthRegister = () => {
 
             <div className="auth-register-helper">
               By creating an account you agree to our{" "}
-              <Link href="/legal/terms" className="auth-register-link">
+              <Link to="/legal/terms" className="auth-register-link">
                 Terms of Service
               </Link>{" "}
               and{" "}
-              <Link href="/legal/privacy" className="auth-register-link">
+              <Link to="/legal/privacy" className="auth-register-link">
                 Privacy Policy
               </Link>
               .
@@ -239,10 +230,7 @@ const AuthRegister = () => {
 
           <p className="auth-register-login-link">
             Already have an account?{" "}
-            <Link 
-              href={`/auth/login${searchParams.get("redirect") ? `?redirect=${searchParams.get("redirect")}` : ""}`} 
-              className="auth-register-link"
-            >
+            <Link to="/auth/login" className="auth-register-link">
               Sign in here
             </Link>
           </p>

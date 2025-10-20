@@ -6,21 +6,12 @@ import Sidebar from '../components/Sidebar';
 import '../styles/dashboard.css';
 import { FaUtensils, FaClipboardList, FaUsers, FaDollarSign, FaChartLine, FaCheckCircle } from 'react-icons/fa';
 
-const StatCard = ({ icon, label, value, color, trend, trendValue }) => (
+const StatCard = ({ icon, label, value, color }) => (
   <div className="stat-card">
-    <div className="stat-card-header">
-      <div className="stat-card-icon" style={{ backgroundColor: color }}>
-        {icon}
-      </div>
-      {trend && (
-        <span className={`stat-trend ${trend === 'up' ? 'trend-up' : 'trend-down'}`}>
-          {trend === 'up' ? '↑' : '↓'} {trendValue}
-        </span>
-      )}
-    </div>
-    <div className="stat-card-body">
-      <p className="stat-label">{label}</p>
-      <h3 className="stat-value">{value}</h3>
+    <div className="stat-card-icon" style={{ backgroundColor: color }}>{icon}</div>
+    <div className="stat-card-info">
+      <p>{label}</p>
+      <h3>{value}</h3>
     </div>
   </div>
 );
@@ -129,53 +120,41 @@ function SuperAdminDashboard() {
       <Sidebar />
       <main className="main-content">
         <div className="dashboard-header">
-          <div>
-            <h1>Dashboard Overview</h1>
-            <p className="dashboard-subtitle">Welcome back, {superAdminName} 👋</p>
+          <h1>Dashboard - Báo cáo Toàn hệ thống</h1>
+          <div className="user-profile">
+            <strong>Welcome, {superAdminName} 👋</strong>
           </div>
-          <button className="refresh-btn" onClick={fetchDashboardData}>
-            <FaChartLine /> Refresh Data
-          </button>
         </div>
 
         {loading ? (
-          <div className="loading-state">
-            <div className="spinner"></div>
-            <p>Loading dashboard data...</p>
-          </div>
+          <p>Đang tải dữ liệu...</p>
         ) : (
           <>
             {/* Main Statistics */}
             <div className="stats-grid">
               <StatCard
                 icon={<FaDollarSign />}
-                label="Total Revenue"
-                value={`$${stats.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                color="#10b981"
-                trend="up"
-                trendValue="12.5%"
+                label="Tổng Doanh Thu"
+                value={`$${stats.totalRevenue.toFixed(2)}`}
+                color="var(--accent-color)"
               />
               <StatCard
                 icon={<FaClipboardList />}
-                label="Total Orders"
-                value={stats.totalOrders.toLocaleString()}
-                color="#6366f1"
-                trend="up"
-                trendValue="8.2%"
+                label="Tổng Đơn Hàng"
+                value={stats.totalOrders}
+                color="var(--secondary-color)"
               />
               <StatCard
                 icon={<FaUtensils />}
-                label="Restaurants"
+                label="Tổng Nhà Hàng"
                 value={stats.totalRestaurants}
-                color="#f59e0b"
+                color="#f7b731"
               />
               <StatCard
                 icon={<FaUsers />}
-                label="Customers"
-                value={stats.totalCustomers.toLocaleString()}
+                label="Tổng Khách Hàng"
+                value={stats.totalCustomers}
                 color="#8e44ad"
-                trend="up"
-                trendValue="5.1%"
               />
             </div>
 
@@ -183,15 +162,15 @@ function SuperAdminDashboard() {
             <div className="stats-grid-secondary">
                <StatCard
                 icon={<FaChartLine />}
-                label="Pending Orders"
+                label="Đơn Đang Xử Lý"
                 value={stats.pendingOrders}
-                color="#f59e0b"
+                color="var(--warning-color)"
               />
               <StatCard
                 icon={<FaCheckCircle />}
-                label="Completed Orders"
+                label="Đơn Hoàn Thành"
                 value={stats.completedOrders}
-                color="#22c55e"
+                color="var(--success-color)"
               />
             </div>
 
@@ -199,95 +178,83 @@ function SuperAdminDashboard() {
             <div className="analysis-section">
               {/* Top Performing Restaurants */}
               <div className="content-area">
-                <h2>🏆 Top Performing Restaurants</h2>
-                <div className="table-container">
-                  <table className="modern-table">
-                    <thead>
-                      <tr>
-                        <th>Restaurant</th>
-                        <th>Orders</th>
-                        <th>Revenue</th>
+                <h2>🏆 Top 5 Nhà Hàng Doanh Thu Cao Nhất</h2>
+                <table className="analysis-table">
+                  <thead>
+                    <tr>
+                      <th>Nhà Hàng</th>
+                      <th>Số Đơn Hàng</th>
+                      <th>Doanh Thu</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topRestaurants.map((rest, idx) => (
+                      <tr key={idx}>
+                        <td>{rest.name}</td>
+                        <td>{rest.orders}</td>
+                        <td>${rest.revenue.toFixed(2)}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {topRestaurants.map((rest, idx) => (
-                        <tr key={idx}>
-                          <td>
-                            <div className="restaurant-cell">
-                              <span className="rank-badge">#{idx + 1}</span>
-                              {rest.name}
-                            </div>
-                          </td>
-                          <td><span className="badge badge-blue">{rest.orders}</span></td>
-                          <td className="revenue-cell">${rest.revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
               {/* Recent Orders */}
               <div className="content-area">
-                <h2>📋 Recent Orders</h2>
-                <div className="table-container">
-                  <table className="modern-table">
-                    <thead>
-                      <tr>
-                        <th>Order ID</th>
-                        <th>Status</th>
-                        <th>Amount</th>
-                        <th>Date</th>
+                <h2>📋 Đơn Hàng Gần Đây</h2>
+                <table className="analysis-table">
+                  <thead>
+                    <tr>
+                      <th>Mã Đơn</th>
+                      <th>Trạng Thái</th>
+                      <th>Giá Trị</th>
+                      <th>Thời Gian</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentOrders.map((order) => (
+                      <tr key={order._id}>
+                        <td>#{order._id.slice(-6)}</td>
+                        <td><span className={`status-badge status-${order.status.toLowerCase()}`}>{order.status}</span></td>
+                        <td>${order.totalPrice.toFixed(2)}</td>
+                        <td>{new Date(order.createdAt).toLocaleString()}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {recentOrders.map((order) => (
-                        <tr key={order._id}>
-                          <td><code>#{order._id.slice(-6)}</code></td>
-                          <td><span className={`status-badge status-${order.status.toLowerCase()}`}>{order.status}</span></td>
-                          <td className="revenue-cell">${order.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="date-cell">{new Date(order.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
 
             {/* Insights Section */}
             <div className="content-area insights-section">
-              <h2>📊 Business Insights</h2>
+              <h2>📊 Phân Tích & Xu Hướng</h2>
               <div className="insights-grid">
                 <div className="insight-card">
-                  <div className="insight-icon">✅</div>
-                  <h4>Completion Rate</h4>
+                  <h4>Tỷ Lệ Hoàn Thành</h4>
                   <p className="insight-value">
                     {stats.totalOrders > 0 
                       ? ((stats.completedOrders / stats.totalOrders) * 100).toFixed(1) 
                       : 0}%
                   </p>
-                  <span className="insight-description">Successfully completed orders</span>
+                  <span className="insight-description">Đơn hàng được hoàn thành thành công</span>
                 </div>
                 <div className="insight-card">
-                  <div className="insight-icon">💰</div>
-                  <h4>Average Order Value</h4>
+                  <h4>Doanh Thu Trung Bình/Đơn</h4>
                   <p className="insight-value">
                     ${stats.totalOrders > 0 
-                      ? (stats.totalRevenue / stats.totalOrders).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                      ? (stats.totalRevenue / stats.totalOrders).toFixed(2) 
                       : 0}
                   </p>
-                  <span className="insight-description">Revenue per order</span>
+                  <span className="insight-description">Giá trị trung bình mỗi đơn hàng</span>
                 </div>
                 <div className="insight-card">
-                  <div className="insight-icon">📈</div>
-                  <h4>Orders per Restaurant</h4>
+                  <h4>Đơn/Nhà Hàng</h4>
                   <p className="insight-value">
                     {stats.totalRestaurants > 0 
                       ? (stats.totalOrders / stats.totalRestaurants).toFixed(1) 
                       : 0}
                   </p>
-                  <span className="insight-description">Average orders per restaurant</span>
+                  <span className="insight-description">Số đơn trung bình mỗi nhà hàng</span>
                 </div>
               </div>
             </div>

@@ -2,8 +2,7 @@
 
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FaBars, FaShoppingCart } from "react-icons/fa";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import CartModal from "./CartModal";
 import { CartContext } from "../pages/contexts/CartContext";
@@ -12,19 +11,14 @@ import styles from "../styles/layoutShell.module.css";
 const join = (...classes: (string | false | null | undefined)[]) => classes.filter(Boolean).join(" ");
 
 const Header = () => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { cartItems, clearCart } = useContext(CartContext);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isCartOpen, setCartOpen] = useState(false);
   const [isLoggedIn, setLoggedIn] = useState(false);
   const [customerName, setCustomerName] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -88,7 +82,7 @@ const Header = () => {
     setLoggedIn(false);
     setCustomerName(null);
     setShowMenu(false);
-    router.push("/");
+    navigate("/");
   };
 
   return (
@@ -105,7 +99,7 @@ const Header = () => {
               <FaBars size={18} />
             </button>
 
-            <Link href="/" className={styles.logo}>
+            <Link to="/" className={styles.logo}>
               <span className={styles.logoTitle}>Fastie Saigon</span>
               <span className={styles.logoTagline}>Fresh bites, fast delivery</span>
             </Link>
@@ -119,15 +113,15 @@ const Header = () => {
               aria-label="View cart"
             >
               <FaShoppingCart size={18} />
-              {isMounted && cartItems.length > 0 && <span className={styles.cartBadge}>{cartItems.length}</span>}
+              {cartItems.length > 0 && <span className={styles.cartBadge}>{cartItems.length}</span>}
             </button>
 
             {!isLoggedIn ? (
               <>
-                <Link href="/auth/login" className={join(styles.primaryButton, styles.loginButton)}>
+                <Link to="/auth/login" className={join(styles.primaryButton, styles.loginButton)}>
                   Log in
                 </Link>
-                <Link href="/auth/register" className={join(styles.primaryButton, styles.signupButton)}>
+                <Link to="/auth/register" className={join(styles.primaryButton, styles.signupButton)}>
                   Sign up
                 </Link>
               </>
@@ -148,7 +142,7 @@ const Header = () => {
 
                 {showMenu && (
                   <div className={styles.profileMenu} role="menu">
-                    <Link href="/customer/profile" onClick={() => setShowMenu(false)}>
+                    <Link to="/customer/profile" onClick={() => setShowMenu(false)}>
                       My profile
                     </Link>
                     <button type="button" onClick={handleLogout}>

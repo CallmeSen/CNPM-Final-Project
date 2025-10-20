@@ -6,7 +6,6 @@ import {
   Query,
   UseGuards,
   UnauthorizedException,
-  Headers,
 } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -38,43 +37,33 @@ export class ReportsController {
   @Get('revenue')
   getRevenue(
     @GetUser() user: AuthenticatedUser,
-    @Headers('authorization') authHeader: string,
     @Query('period') period?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
     const restaurantId = this.ensureRestaurant(user);
-    return this.reportsService.getRevenueData(
-      restaurantId,
-      {
-        period: period as 'day' | 'week' | 'month' | undefined,
-        startDate,
-        endDate,
-      },
-      authHeader,
-    );
+    return this.reportsService.getRevenueData(restaurantId, {
+      period: period as 'day' | 'week' | 'month' | undefined,
+      startDate,
+      endDate,
+    });
   }
 
   @Get('top-items')
   getTopSellingItems(
     @GetUser() user: AuthenticatedUser,
-    @Headers('authorization') authHeader: string,
     @Query('period') period?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('limit') limit?: string,
   ) {
     const restaurantId = this.ensureRestaurant(user);
-    return this.reportsService.getTopSellingItems(
-      restaurantId,
-      {
-        period: period as 'day' | 'week' | 'month' | undefined,
-        startDate,
-        endDate,
-        limit: limit ? Number(limit) : undefined,
-      },
-      authHeader,
-    );
+    return this.reportsService.getTopSellingItems(restaurantId, {
+      period: period as 'day' | 'week' | 'month' | undefined,
+      startDate,
+      endDate,
+      limit: limit ? Number(limit) : undefined,
+    });
   }
 
   @Get('reviews')
@@ -92,31 +81,16 @@ export class ReportsController {
   @Get('summary')
   getSummary(
     @GetUser() user: AuthenticatedUser,
-    @Headers('authorization') authHeader: string,
     @Query('period') period?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
     const restaurantId = this.ensureRestaurant(user);
-    return this.reportsService.getSummary(
-      restaurantId,
-      {
-        period: period as 'day' | 'week' | 'month' | undefined,
-        startDate,
-        endDate,
-      },
-      authHeader,
-    );
-  }
-
-  @Get('debug')
-  debugUser(@GetUser() user: AuthenticatedUser) {
-    return {
-      message: 'Debug info',
-      user,
-      restaurantId: user.restaurantId,
-      hasToken: true,
-    };
+    return this.reportsService.getSummary(restaurantId, {
+      period: period as 'day' | 'week' | 'month' | undefined,
+      startDate,
+      endDate,
+    });
   }
 
   @Post('review')
