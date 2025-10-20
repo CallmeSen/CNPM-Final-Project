@@ -27,8 +27,7 @@ on:
         default: 'false'
 
 env:
-  NODE_VERSION_LATEST: '20.x'
-  NODE_VERSION_LTS: '18.x'
+  NODE_VERSION_LATEST: '24.8.0'
 
 jobs:
   # ==================== Setup & Security Checks ====================
@@ -123,7 +122,7 @@ jobs:
     strategy:
       fail-fast: false  # Continue other jobs if one fails
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: ['24.8.0']
 
     steps:
       - name: Checkout code
@@ -206,7 +205,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: ['24.8.0']
 
     steps:
       - name: Checkout code
@@ -283,7 +282,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: ['24.8.0']
 
     steps:
       - name: Checkout code
@@ -386,7 +385,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: ['24.8.0']
 
     steps:
       - name: Checkout code
@@ -469,8 +468,8 @@ jobs:
           echo "Bundle Size Analysis"
           echo "======================="
           for service in auth-service order-service payment-service restaurant-service; do
-            if [ -d "${service}-build-20.x" ]; then
-              size=$(du -sh "${service}-build-20.x" | cut -f1)
+            if [ -d "${service}-build-24.8.0" ]; then
+              size=$(du -sh "${service}-build-24.8.0" | cut -f1)
               echo "$service: $size"
             fi
           done
