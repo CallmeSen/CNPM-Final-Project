@@ -1,4 +1,4 @@
-name: Backend CI (Full)
+name: backend-ci
 
 on:
   push:
@@ -177,7 +177,7 @@ jobs:
           echo "Build successful - dist directory exists"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: auth-service-build-${{ matrix.node-version }}
           path: backend/auth-service/dist
@@ -254,7 +254,7 @@ jobs:
           echo "Build successful"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: order-service-build-${{ matrix.node-version }}
           path: backend/order-service/dist
@@ -349,7 +349,7 @@ jobs:
           echo "Build successful"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: payment-service-build-${{ matrix.node-version }}
           path: backend/payment-service/dist
@@ -357,7 +357,7 @@ jobs:
 
       - name: Upload test artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: payment-service-test-results-${{ matrix.node-version }}
           path: backend/payment-service/coverage
@@ -434,7 +434,7 @@ jobs:
           echo "Build successful"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: restaurant-service-build-${{ matrix.node-version }}
           path: backend/restaurant-service/dist
@@ -475,19 +475,91 @@ jobs:
           done
         continue-on-error: true
 
+  # ==================== Build Summary ====================
+  build-summary:
+    name: Build Summary & Report
+    runs-on: ubuntu-latest
+    needs: [security-scan, code-quality, auth-service, order-service, payment-service, restaurant-service]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate build report
+        run: |
+          echo "#  Backend CI Build Report" > build-report.md
+          echo "" >> build-report.md
+          echo "##  Security & Quality" >> build-report.md
+          echo "- Security Scan: ${{ needs.security-scan.result }}" >> build-report.md
+          echo "- Code Quality: ${{ needs.code-quality.result }}" >> build-report.md
+          echo "" >> build-report.md
+          echo "##  Service Build Status" >> build-report.md
+          echo "- Auth Service: ${{ needs.auth-service.result }}" >> build-report.md
+          echo "- Order Service: ${{ needs.order-service.result }}" >> build-report.md
+          echo "- Payment Service: ${{ needs.payment-service.result }}" >> build-report.md
+          echo "- Restaurant Service: ${{ needs.restaurant-service.result }}" >> build-report.md
+          echo "" >> build-report.md
+          echo "##  Summary" >> build-report.md
+          
+          # Count successes and failures
+          success=0
+          failed=0
+          
+          if [ "${{ needs.auth-service.result }}" == "success" ]; then ((success++)); else ((failed++)); fi
+          if [ "${{ needs.order-service.result }}" == "success" ]; then ((success++)); else ((failed++)); fi
+          if [ "${{ needs.payment-service.result }}" == "success" ]; then ((success++)); else ((failed++)); fi
+          if [ "${{ needs.restaurant-service.result }}" == "success" ]; then ((success++)); else ((failed++)); fi
+          
+          echo "-  Successful: $success/4 services" >> build-report.md
+          if [ $failed -gt 0 ]; then
+            echo "-  Failed: $failed/4 services" >> build-report.md
+          fi
+          
+          cat build-report.md
+
+      - name: Upload build report
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-report
+          path: build-report.md
+          retention-days: 30
+
+      - name: Comment PR with summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('build-report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+        continue-on-error: true
+          
+      - name: Check overall status
+        run: |
+          echo "Checking build status..."
+          if [ "${{ needs.auth-service.result }}" == "success" ] && \
+             [ "${{ needs.order-service.result }}" == "success" ] && \
+             [ "${{ needs.payment-service.result }}" == "success" ] && \
+             [ "${{ needs.restaurant-service.result }}" == "success" ]; then
+            echo "All services passed!"
+            exit 0
+          else
+            echo "Some services failed!"
+            exit 1
+          fi
+
   # ==================== Docker Build (Optional) ====================
   docker-build:
     name: Docker Build & Scan
     runs-on: ubuntu-latest
-    needs: [auth-service, order-service, payment-service, restaurant-service]
-    if: >
-      always() &&
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') &&
-      needs.auth-service.result == 'success' &&
-      needs.order-service.result == 'success' &&
-      needs.payment-service.result == 'success' &&
-      needs.restaurant-service.result == 'success'
+    needs: [build-summary]
+    if: ${{ always() && needs.build-summary.result == 'success' && github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') }}
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -557,4 +629,40 @@ jobs:
       #     push: true
       #     tags: ${{ steps.meta.outputs.tags }}
       #     labels: ${{ steps.meta.outputs.labels }}
+
+  # ==================== Notifications ====================
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [build-summary]
+    if: always() && github.event_name == 'push'
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    steps:
+      - name: Prepare notification message
+        id: message
+        run: |
+          if [ "${{ needs.build-summary.result }}" == "success" ]; then
+            echo "status=SUCCESS" >> $GITHUB_OUTPUT
+            echo "color=good" >> $GITHUB_OUTPUT
+          else
+            echo "status=FAILED" >> $GITHUB_OUTPUT
+            echo "color=danger" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack notification
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              text: "${{ steps.message.outputs.status }} - Backend CI Build",
+              attachments: [{
+                color: '${{ steps.message.outputs.color }}',
+                text: `Branch: ${process.env.GITHUB_REF}\nCommit: ${process.env.GITHUB_SHA.substring(0, 7)}\nAuthor: ${process.env.GITHUB_ACTOR}\nStatus: ${{ needs.build-summary.result }}`
+              }]
+            }
+        continue-on-error: true
 
