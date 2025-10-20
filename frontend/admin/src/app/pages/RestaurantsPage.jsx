@@ -44,7 +44,7 @@ function RestaurantsPage() {
   }, []);
 
   const handleEditClick = (restaurant) => {
-    setEditing(restaurant._id);
+    setEditing(restaurant.id);
     setFormData({
       name: restaurant.name,
       ownerName: restaurant.ownerName,
@@ -73,7 +73,7 @@ function RestaurantsPage() {
       if (res.ok) {
         setRestaurants(
           restaurants.map((rest) =>
-            rest._id === editing ? { ...rest, ...formData } : rest
+            rest.id === editing ? { ...rest, ...formData } : rest
           )
         );
         setEditing(null);
@@ -97,7 +97,7 @@ function RestaurantsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setRestaurants(restaurants.filter((r) => r._id !== id));
+        setRestaurants(restaurants.filter((r) => r.id !== id));
         alert(data.message);
       } else {
         alert(data.message || 'Delete failed');
@@ -151,14 +151,14 @@ function RestaurantsPage() {
             </thead>
             <tbody>
               {filteredRestaurants.map((rest) => (
-                <tr key={rest._id}>
+                <tr key={rest.id}>
                   <td>{rest.name}</td>
                   <td>{rest.ownerName}</td>
                   <td>{rest.location}</td>
                   <td>{rest.contactNumber}</td>
                   <td className="action-buttons">
                     <button className="btn-icon edit" onClick={() => handleEditClick(rest)}><FaEdit /></button>
-                    <button className="btn-icon delete" onClick={() => handleDelete(rest._id)}><FaTrash /></button>
+                    <button className="btn-icon delete" onClick={() => handleDelete(rest.id)}><FaTrash /></button>
                   </td>
                 </tr>
               ))}

@@ -1,11 +1,10 @@
-import { BadRequestException, Injectable, HttpException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { Order } from '../schema/order.schema';
 import { Review } from '../schema/review.schema';
 import { FoodItem } from '../schema/food-item.schema';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
 
 interface DateQueryOptions {
   period?: 'day' | 'week' | 'month';
@@ -13,31 +12,12 @@ interface DateQueryOptions {
   endDate?: string;
 }
 
-interface OrderFromService {
-  _id: string;
-  customerId: string;
-  restaurantId: string;
-  items: Array<{
-    foodId: string;
-    quantity: number;
-    price: number;
-  }>;
-  totalPrice: number;
-  paymentStatus: string;
-  status: string;
-  deliveryAddress: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 @Injectable()
 export class ReportsService {
-  private readonly ORDER_SERVICE_URL = process.env.ORDER_SERVICE_URL || 'http://localhost:5005';
-
   constructor(
+    @InjectModel(Order.name) private readonly orderModel: Model<Order>,
     @InjectModel(Review.name) private readonly reviewModel: Model<Review>,
     @InjectModel(FoodItem.name) private readonly foodItemModel: Model<FoodItem>,
-    private readonly httpService: HttpService,
   ) {}
 
   private resolveDateRange({
@@ -70,138 +50,78 @@ export class ReportsService {
     return { start, end };
   }
 
-  async getRevenueData(
-    restaurantId: string,
-    options: DateQueryOptions,
-    authHeader?: string,
-  ) {
+  async getRevenueData(restaurantId: string, options: DateQueryOptions) {
     const { start, end } = this.resolveDateRange(options);
 
-    try {
-      // Fetch orders from order-service
-      const response = await firstValueFrom(
-        this.httpService.get<OrderFromService[]>(
-          `${this.ORDER_SERVICE_URL}/api/orders`,
-          {
-            headers: {
-              Authorization: authHeader || '',
-            },
+    return this.orderModel.aggregate([
+      {
+        $match: {
+          restaurantId,
+          createdAt: { $gte: start, $lte: end },
+          paymentStatus: 'Paid',
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
           },
-        ),
-      );
-
-      const orders = response.data;
-
-      // Filter and aggregate locally
-      const filteredOrders = orders.filter(
-        (order) =>
-          order.restaurantId === restaurantId &&
-          order.paymentStatus === 'Paid' &&
-          new Date(order.createdAt) >= start &&
-          new Date(order.createdAt) <= end,
-      );
-
-      // Group by date
-      const revenueMap = new Map<string, { revenue: number; orders: number }>();
-
-      filteredOrders.forEach((order) => {
-        const dateKey = new Date(order.createdAt).toISOString().split('T')[0];
-        const existing = revenueMap.get(dateKey) || { revenue: 0, orders: 0 };
-        existing.revenue += order.totalPrice;
-        existing.orders += 1;
-        revenueMap.set(dateKey, existing);
-      });
-
-      // Convert to array and sort
-      return Array.from(revenueMap.entries())
-        .map(([date, data]) => ({
-          date,
-          revenue: data.revenue,
-          orders: data.orders,
-        }))
-        .sort((a, b) => a.date.localeCompare(b.date));
-    } catch (error) {
-      return [];
-    }
+          revenue: { $sum: '$totalPrice' },
+          orders: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+      {
+        $project: {
+          _id: 0,
+          date: '$_id',
+          revenue: 1,
+          orders: 1,
+        },
+      },
+    ]);
   }
 
   async getTopSellingItems(
     restaurantId: string,
     options: DateQueryOptions & { limit?: number },
-    authHeader?: string,
   ) {
     const { start, end } = this.resolveDateRange(options);
     const limit = options.limit ?? 5;
 
-    try {
-      // Fetch orders from order-service
-      const response = await firstValueFrom(
-        this.httpService.get<OrderFromService[]>(
-          `${this.ORDER_SERVICE_URL}/api/orders`,
-          {
-            headers: {
-              Authorization: authHeader || '',
-            },
-          },
-        ),
-      );
+    const topItems = await this.orderModel.aggregate([
+      {
+        $match: {
+          restaurantId,
+          createdAt: { $gte: start, $lte: end },
+          paymentStatus: 'Paid',
+        },
+      },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.foodId',
+          quantity: { $sum: '$items.quantity' },
+          revenue: { $sum: { $multiply: ['$items.quantity', '$items.price'] } },
+        },
+      },
+      { $sort: { quantity: -1 } },
+      { $limit: limit },
+    ]);
 
-      const orders = response.data;
-
-      // Filter paid orders within date range
-      const filteredOrders = orders.filter(
-        (order) =>
-          order.restaurantId === restaurantId &&
-          order.paymentStatus === 'Paid' &&
-          new Date(order.createdAt) >= start &&
-          new Date(order.createdAt) <= end,
-      );
-
-      // Aggregate items
-      const itemsMap = new Map<
-        string,
-        { quantity: number; revenue: number }
-      >();
-
-      filteredOrders.forEach((order) => {
-        order.items.forEach((item) => {
-          const existing = itemsMap.get(item.foodId) || {
-            quantity: 0,
-            revenue: 0,
-          };
-          existing.quantity += item.quantity;
-          existing.revenue += item.quantity * item.price;
-          itemsMap.set(item.foodId, existing);
-        });
-      });
-
-      // Sort by quantity and limit
-      const topItems = Array.from(itemsMap.entries())
-        .map(([foodId, data]) => ({
-          _id: foodId,
-          quantity: data.quantity,
-          revenue: data.revenue,
-        }))
-        .sort((a, b) => b.quantity - a.quantity)
-        .slice(0, limit);
-
-      // Fetch food item details
-      return Promise.all(
-        topItems.map(async (item) => {
-          const foodItem = await this.foodItemModel.findById(item._id).lean();
-          return {
-            id: item._id,
-            name: foodItem?.name ?? 'Unknown Item',
-            quantity: item.quantity,
-            revenue: item.revenue,
-            image: foodItem?.image ?? '',
-            category: foodItem?.category ?? '',
-          };
-        }),
-      );
-    } catch (error) {
-      return [];
-    }
+    return Promise.all(
+      topItems.map(async (item) => {
+        const foodItem = await this.foodItemModel.findById(item._id).lean();
+        return {
+          id: item._id,
+          name: foodItem?.name ?? 'Unknown Item',
+          quantity: item.quantity,
+          revenue: item.revenue,
+          image: foodItem?.image ?? '',
+          category: foodItem?.category ?? '',
+        };
+      }),
+    );
   }
 
   async getCustomerReviews(restaurantId: string, limit = 10) {
@@ -227,79 +147,54 @@ export class ReportsService {
     });
   }
 
-  async getSummary(
-    restaurantId: string,
-    options: DateQueryOptions,
-    authHeader?: string,
-  ) {
+  async getSummary(restaurantId: string, options: DateQueryOptions) {
     const { start, end } = this.resolveDateRange(options);
 
-    try {
-      // Fetch orders from order-service
-      const response = await firstValueFrom(
-        this.httpService.get<OrderFromService[]>(
-          `${this.ORDER_SERVICE_URL}/api/orders`,
-          {
-            headers: {
-              Authorization: authHeader || '',
-            },
-          },
-        ),
-      );
-
-      const orders = response.data;
-
-      // Filter and calculate order stats
-      const filteredOrders = orders.filter(
-        (order) =>
-          order.restaurantId === restaurantId &&
-          order.paymentStatus === 'Paid' &&
-          new Date(order.createdAt) >= start &&
-          new Date(order.createdAt) <= end,
-      );
-
-      const totalRevenue = filteredOrders.reduce(
-        (sum, order) => sum + order.totalPrice,
-        0,
-      );
-      const totalOrders = filteredOrders.length;
-
-      // Calculate rating stats
-      const ratingStats = await this.reviewModel.aggregate([
-        {
-          $match: {
-            restaurant: restaurantId,
-            createdAt: { $gte: start, $lte: end },
-          },
+    const [orderStats] = await this.orderModel.aggregate([
+      {
+        $match: {
+          restaurantId,
+          createdAt: { $gte: start, $lte: end },
+          paymentStatus: 'Paid',
         },
-        {
-          $group: {
-            _id: null,
-            averageRating: { $avg: '$rating' },
-            totalReviews: { $sum: 1 },
-          },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$totalPrice' },
+          totalOrders: { $sum: 1 },
         },
-      ]);
+      },
+    ]);
 
-      const averageRating = ratingStats[0]?.averageRating ?? 0;
-      const totalReviews = ratingStats[0]?.totalReviews ?? 0;
+    const [ratingStats] = await this.reviewModel.aggregate([
+      {
+        $match: {
+          restaurant: restaurantId,
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: '$rating' },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ]);
 
-      return {
-        totalRevenue,
-        totalOrders,
-        averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
-        averageRating,
-        totalReviews,
-      };
-    } catch (error) {
-      return {
-        totalRevenue: 0,
-        totalOrders: 0,
-        averageOrderValue: 0,
-        averageRating: 0,
-        totalReviews: 0,
-      };
-    }
+    const totalRevenue = orderStats?.totalRevenue ?? 0;
+    const totalOrders = orderStats?.totalOrders ?? 0;
+    const averageRating = ratingStats?.averageRating ?? 0;
+    const totalReviews = ratingStats?.totalReviews ?? 0;
+
+    return {
+      totalRevenue,
+      totalOrders,
+      averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+      averageRating,
+      totalReviews,
+    };
   }
 
   async createReview(restaurantId: string, dto: CreateReviewDto) {

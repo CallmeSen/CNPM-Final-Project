@@ -1,14 +1,78 @@
 /* Reports & Analytics Page */
 
-.reports-dashboard {
+.reports-dashboard .dashboard-sidebar {
+  gap: 16px;
+}
+
+.reports-dashboard .dashboard-sidebar h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.reports-dashboard .sidebar-tagline {
+  font-size: 13px;
+  color: #d1d5db;
+  margin: 0;
+}
+
+.reports-dashboard .sidebar-header {
   display: flex;
-  min-height: 100vh;
-  background: #f5f7fa;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reports-dashboard .sidebar-logo {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: rgba(26, 188, 156, 0.2);
+  font-size: 30px;
+}
+
+.reports-dashboard .sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reports-dashboard .dashboard-sidebar .sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  border-radius: 10px;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.reports-dashboard .dashboard-sidebar .sidebar-link.active {
+  background-color: #1abc9c;
+  color: #ffffff;
+}
+
+.reports-dashboard .dashboard-sidebar .sidebar-link.active:hover {
+  transform: none;
+  background-color: #16a085;
+}
+
+.reports-dashboard .sidebar-link__icon {
+  font-size: 18px;
+}
+
+.reports-dashboard .sidebar-footer {
+  margin-top: auto;
+  width: 100%;
+}
+
+.reports-dashboard .sidebar-footer .logout-btn {
+  width: 100%;
 }
 
 .reports-dashboard .reports-content {
-  flex: 1;
-  margin-left: 280px;
   padding: 30px;
   overflow-y: auto;
   background: #f9fafb;
@@ -458,12 +522,6 @@
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
-  .reports-dashboard .reports-content {
-    margin-left: 240px;
-  }
-}
-
 @media (max-width: 900px) {
   .reports-header {
     flex-direction: column;
@@ -502,16 +560,5 @@
 
   .review-content {
     padding-left: 0;
-  }
-}
-
-@media (max-width: 768px) {
-  .reports-dashboard .reports-content {
-    margin-left: 72px;
-    padding: 20px 16px;
-  }
-
-  .reports-container {
-    padding: 0 16px 32px;
   }
 }
