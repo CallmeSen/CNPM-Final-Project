@@ -1,16 +1,22 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
   app.setGlobalPrefix('api');
 
   const corsConfig = configService.get<string>('CORS_ORIGIN');
-  const defaultOrigins = ['http://localhost:3000', 'http://localhost:3002'];
+  const defaultOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+  ];
   let allowedOrigins: string[] | string = corsConfig
     ? corsConfig
         .split(',')
@@ -29,6 +35,10 @@ async function bootstrap() {
   app.enableCors({
     origin: allowedOrigins,
     credentials: true,
+  });
+
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
   });
 
   app.useGlobalPipes(

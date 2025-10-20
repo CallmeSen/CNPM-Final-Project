@@ -1,9 +1,15 @@
-﻿import { IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, ValidateIf } from 'class-validator';
 
 export class LoginSuperAdminDto {
+  @ValidateIf((dto) => !dto.email)
   @IsNotEmpty()
   @IsString()
-  username: string;
+  username?: string;
+
+  @ValidateIf((dto) => !dto.username)
+  @IsNotEmpty()
+  @IsEmail()
+  email?: string;
 
   @IsNotEmpty()
   @IsString()

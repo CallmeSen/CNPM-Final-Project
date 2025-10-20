@@ -45,9 +45,11 @@ export class SuperAdminService {
   }
 
   async login(dto: LoginSuperAdminDto) {
-    const superAdmin = await this.superAdminModel.findOne({
-      username: dto.username,
-    });
+    const lookupFilter = dto.username
+      ? { username: dto.username }
+      : { email: dto.email };
+
+    const superAdmin = await this.superAdminModel.findOne(lookupFilter);
 
     if (!superAdmin) {
       throw new UnauthorizedException('Invalid credentials');

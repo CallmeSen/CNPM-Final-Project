@@ -2,6 +2,7 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
+import type { StringValue } from 'ms';
 import { SuperAdminController } from './super-admin.controller';
 import { SuperAdminService } from './super-admin.service';
 import { SuperAdmin, SuperAdminSchema } from '../schema/super-admin.schema';
@@ -15,12 +16,17 @@ import { RestaurantsModule } from '../restaurants/restaurants.module';
     ]),
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN') ?? '7d',
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const expiresIn =
+          configService.get<StringValue>('JWT_EXPIRES_IN') ?? '7d';
+
+        return {
+          secret: configService.get<string>('JWT_SECRET'),
+          signOptions: {
+            expiresIn,
+          },
+        };
+      },
     }),
     RestaurantsModule,
   ],
