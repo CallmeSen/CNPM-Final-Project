@@ -1,3 +1,4 @@
+[![backend-ci](https://github.com/CallmeSen/CNPM-Final-Project/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/CallmeSen/CNPM-Final-Project/actions/workflows/backend-ci.yml)
 # Fastie.Saigon – Food Delivery Microservices
 
 A microservices‐based food ordering & delivery platform.  
