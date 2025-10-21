@@ -683,18 +683,21 @@ const CreateOrderFromCart = () => {
                   onChange={handleInputChange}
                   placeholder="Enter your complete delivery address..."
                   required
-                  rows={4}
+                  rows={2}
                   style={{
                     width: "100%",
-                    padding: "15px",
+                    padding: "10px",
                     border: "2px solid #eee",
                     borderRadius: "12px",
                     fontSize: "16px",
+                    color: "#111827",
+                    fontWeight: 400,
                     transition: "border-color 0.3s ease",
                     outline: "none",
                     resize: "vertical",
                     boxSizing: "border-box",
                     fontFamily: "inherit",
+                    lineHeight: "1.4",
                   }}
                   onFocus={(event) => {
                     event.currentTarget.style.borderColor = "#667eea";

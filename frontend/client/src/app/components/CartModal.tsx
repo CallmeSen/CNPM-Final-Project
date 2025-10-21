@@ -4,7 +4,7 @@
 
 import { useContext, useEffect, SyntheticEvent, useMemo } from "react";
 import { FaShoppingBag, FaTrashAlt } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { CartContext } from "../pages/contexts/CartContext";
 import styles from "../styles/layoutShell.module.css";
 import { buildRestaurantServiceUrl } from "../../config/api";
@@ -24,7 +24,7 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
 
 const CartModal = ({ isOpen, onClose }: CartModalProps) => {
   const { cartItems, removeFromCart, updateQuantity } = useContext(CartContext);
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const totalQuantity = useMemo(
     () =>
@@ -62,12 +62,12 @@ const CartModal = ({ isOpen, onClose }: CartModalProps) => {
 
     if (!token) {
       onClose();
-      navigate("/auth/login");
+      router.push("/auth/login");
       return;
     }
 
     onClose();
-    navigate("/orders/create-from-cart");
+    router.push("/orders/create-from-cart");
   };
 
   const handleImageError = (event: SyntheticEvent<HTMLImageElement>) => {
