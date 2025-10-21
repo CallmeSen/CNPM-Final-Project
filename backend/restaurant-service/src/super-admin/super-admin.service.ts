@@ -73,7 +73,6 @@ export class SuperAdminService {
     return {
       message: 'Login successful',
       token,
-      name: superAdmin.username, // Add name field for frontend
       superAdmin: {
         id: superAdmin._id,
         username: superAdmin.username,

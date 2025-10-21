@@ -7,72 +7,16 @@ body {
   }
   
   .dashboard-container {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    height: 100vh;
+    display: flex;
+    min-height: 100vh;
     overflow: hidden;
   }
   
-  /* Sidebar */
-  .dashboard-sidebar {
-    background-color: #2c3e50;
-    color: white;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  .dashboard-sidebar button {
-    background-color: #34495e;
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    text-align: left;
-    font-size: 16px;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-  }
-  
-  .dashboard-sidebar button:hover {
-    background-color: #1abc9c;
-    transform: scale(1.05);
-  }
+  /* Sidebar styles moved to sidebar.css */
 
-  .dashboard-sidebar .sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    width: 100%;
-  }
-
-  .dashboard-sidebar .sidebar-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .dashboard-sidebar .sidebar-link__icon {
-    font-size: 18px;
-    display: inline-flex;
-  }
-
-  .dashboard-sidebar button.active {
-    background-color: #1abc9c;
-    color: #ffffff;
-    transform: scale(1.05);
-  }
-
-  /* Header */
+  /* Header (deprecated - user greeting moved to sidebar) */
   .dashboard-header {
-    grid-column: span 2;
-    background-color: #34495e;
-    color: white;
-    padding: 20px 30px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: none;
   }
   
   .dashboard-header p {
@@ -95,12 +39,28 @@ body {
     background-color: #c0392b;
     transform: scale(1.05);
   }
+
+  /* Responsive adjustments */
+  @media (max-width: 1024px) {
+    .dashboard-content {
+      margin-left: 240px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-content {
+      margin-left: 72px;
+      padding: 20px 16px;
+    }
+  }
   
   /* Main Content */
 .dashboard-content {
+    flex: 1;
     padding: 30px;
     overflow-y: auto;
     color: #111;
+    margin-left: 280px;
   }
   
   .section-stack {
@@ -637,4 +597,36 @@ body {
   .fdelete-btn:hover {
     background-color: #c0392b !important;
     transform: scale(1.05) !important;
+  }
+
+  /* Compact form for Add Food Item section */
+  .section-card .form-grid {
+    max-width: 100%;
+  }
+  
+  .section-card .form-grid input,
+  .section-card .form-grid textarea {
+    font-size: 14px;
+    padding: 10px 14px;
+    width: 100%;
+  }
+  
+  .section-card .form-grid input[type="text"],
+  .section-card .form-grid input[type="number"] {
+    height: 40px;
+  }
+  
+  .section-card .form-grid textarea {
+    min-height: 80px;
+  }
+  
+  .section-card .form-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  @media (max-width: 768px) {
+    .section-card .form-grid {
+      grid-template-columns: 1fr;
+    }
   }

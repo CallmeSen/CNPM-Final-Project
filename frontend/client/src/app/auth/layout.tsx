@@ -1,15 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { ReactNode } from "react";
 
-export default function AuthLayout() {
-  useEffect(() => {
-    // Redirect to root, React Router will handle the actual routing
-    const currentPath = window.location.pathname;
-    if (currentPath !== "/") {
-      window.location.href = "/" + currentPath;
-    }
-  }, []);
-
-  return null;
+export default function AuthLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>;
 }

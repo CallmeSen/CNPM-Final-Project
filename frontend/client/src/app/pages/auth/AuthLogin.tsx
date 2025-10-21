@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import axios from "axios";
 import "../../styles/auth-login.css";
 
@@ -10,7 +11,8 @@ const AuthLogin = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -45,7 +47,14 @@ const AuthLogin = () => {
         localStorage.removeItem("customerName");
       }
       window.dispatchEvent(new Event("storage"));
-      navigate("/");
+      
+      // Check if there's a redirect parameter
+      const redirectPath = searchParams.get("redirect");
+      if (redirectPath) {
+        router.push(redirectPath);
+      } else {
+        router.push("/");
+      }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.message ?? "Login failed");
@@ -91,7 +100,7 @@ const AuthLogin = () => {
       <div className="auth-login-form-side">
         <div className="auth-login-form-container">
           <div className="auth-login-back-link">
-            <Link to="/" className="auth-login-back-btn">
+            <Link href="/" className="auth-login-back-btn">
               ← Back to Home
             </Link>
           </div>
@@ -162,7 +171,7 @@ const AuthLogin = () => {
                 <input type="checkbox" />
                 <span>Remember me</span>
               </label>
-              <Link to="/auth/forgot-password" className="auth-login-forgot">
+              <Link href="/auth/forgot-password" className="auth-login-forgot">
                 Forgot Password?
               </Link>
             </div>
@@ -200,7 +209,10 @@ const AuthLogin = () => {
 
           <p className="auth-login-signup-link">
             Don&apos;t have an account?{" "}
-            <Link to="/auth/register" className="auth-login-link">
+            <Link 
+              href={`/auth/register${searchParams.get("redirect") ? `?redirect=${searchParams.get("redirect")}` : ""}`} 
+              className="auth-login-link"
+            >
               Sign up now
             </Link>
           </p>
