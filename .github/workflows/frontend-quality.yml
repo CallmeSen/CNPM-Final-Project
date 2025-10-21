@@ -42,7 +42,7 @@ jobs:
         working-directory: frontend/client
         run: |
           npm ci
-          echo "📊 Checking for outdated packages..."
+          echo "Checking for outdated packages..."
           npm outdated || true
 
       # Admin App Quality
@@ -50,7 +50,7 @@ jobs:
         working-directory: frontend/admin
         run: |
           npm ci
-          echo "📊 Checking for outdated packages..."
+          echo "Checking for outdated packages..."
           npm outdated || true
 
       # Restaurant App Quality
@@ -58,7 +58,7 @@ jobs:
         working-directory: frontend/restaurant
         run: |
           npm ci
-          echo "📊 Checking for outdated packages..."
+          echo "Checking for outdated packages..."
           npm outdated || true
 
   security-audit:
@@ -78,7 +78,7 @@ jobs:
         working-directory: frontend/client
         run: |
           npm ci
-          echo "🔒 Running security audit for Client App..."
+          echo "Running security audit for Client App..."
           npm audit --audit-level=moderate || true
           npm audit fix --dry-run || true
 
@@ -86,7 +86,7 @@ jobs:
         working-directory: frontend/admin
         run: |
           npm ci
-          echo "🔒 Running security audit for Admin App..."
+          echo "Running security audit for Admin App..."
           npm audit --audit-level=moderate || true
           npm audit fix --dry-run || true
 
@@ -94,7 +94,7 @@ jobs:
         working-directory: frontend/restaurant
         run: |
           npm ci
-          echo "🔒 Running security audit for Restaurant App..."
+          echo "Running security audit for Restaurant App..."
           npm audit --audit-level=moderate || true
           npm audit fix --dry-run || true
 
@@ -130,27 +130,27 @@ jobs:
         run: |
           npm ci
           npm run build
-          echo "📦 Client App Bundle Size:"
-          du -sh build/
-          du -sh build/static/js/*.js | sort -h
+          echo "Client App Bundle Size:"
+          du -sh .next/ || echo "Build directory not found"
+          du -sh .next/static/chunks/*.js 2>/dev/null | sort -h || true
 
       - name: Build and Check Admin Bundle Size
         working-directory: frontend/admin
         run: |
           npm ci
           npm run build
-          echo "📦 Admin App Bundle Size:"
-          du -sh build/
-          du -sh build/static/js/*.js | sort -h
+          echo "Admin App Bundle Size:"
+          du -sh .next/ || echo "Build directory not found"
+          du -sh .next/static/chunks/*.js 2>/dev/null | sort -h || true
 
       - name: Build and Check Restaurant Bundle Size
         working-directory: frontend/restaurant
         run: |
           npm ci
           npm run build
-          echo "📦 Restaurant App Bundle Size:"
-          du -sh build/
-          du -sh build/static/js/*.js | sort -h
+          echo "Restaurant App Bundle Size:"
+          du -sh .next/ || echo "Build directory not found"
+          du -sh .next/static/chunks/*.js 2>/dev/null | sort -h || true
 
   code-format-check:
     name: Code Format Check
@@ -167,7 +167,7 @@ jobs:
 
       - name: Check code formatting
         run: |
-          echo "✨ Checking code formatting..."
+          echo "Checking code formatting..."
           echo "Note: Add prettier or eslint configuration to enforce formatting"
           # npm run format:check || echo "No format check script found"
 
