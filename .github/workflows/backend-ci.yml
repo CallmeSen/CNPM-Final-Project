@@ -488,7 +488,7 @@ jobs:
 
       - name: Generate build report
         run: |
-          cat > build-report.md << 'EOF'
+          cat > build-report.md << EOF
           # Backend CI Build Report
           
           ## Security & Quality
@@ -513,9 +513,9 @@ jobs:
           if [ "${{ needs.payment-service.result }}" == "success" ]; then ((success++)); else ((failed++)); fi
           if [ "${{ needs.restaurant-service.result }}" == "success" ]; then ((success++)); else ((failed++)); fi
           
-          echo "-  Successful: $success/4 services" >> build-report.md
+          echo "- Successful: $success/4 services" >> build-report.md
           if [ $failed -gt 0 ]; then
-            echo "-  Failed: $failed/4 services" >> build-report.md
+            echo "- Failed: $failed/4 services" >> build-report.md
           fi
           
           cat build-report.md
