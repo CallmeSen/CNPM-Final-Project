@@ -488,19 +488,21 @@ jobs:
 
       - name: Generate build report
         run: |
-          echo "#  Backend CI Build Report" > build-report.md
-          echo "" >> build-report.md
-          echo "##  Security & Quality" >> build-report.md
-          echo "- Security Scan: ${{ needs.security-scan.result }}" >> build-report.md
-          echo "- Code Quality: ${{ needs.code-quality.result }}" >> build-report.md
-          echo "" >> build-report.md
-          echo "##  Service Build Status" >> build-report.md
-          echo "- Auth Service: ${{ needs.auth-service.result }}" >> build-report.md
-          echo "- Order Service: ${{ needs.order-service.result }}" >> build-report.md
-          echo "- Payment Service: ${{ needs.payment-service.result }}" >> build-report.md
-          echo "- Restaurant Service: ${{ needs.restaurant-service.result }}" >> build-report.md
-          echo "" >> build-report.md
-          echo "##  Summary" >> build-report.md
+          cat > build-report.md << 'EOF'
+          # Backend CI Build Report
+          
+          ## Security & Quality
+          - Security Scan: ${{ needs.security-scan.result }}
+          - Code Quality: ${{ needs.code-quality.result }}
+          
+          ## Service Build Status
+          - Auth Service: ${{ needs.auth-service.result }}
+          - Order Service: ${{ needs.order-service.result }}
+          - Payment Service: ${{ needs.payment-service.result }}
+          - Restaurant Service: ${{ needs.restaurant-service.result }}
+          
+          ## Summary
+          EOF
           
           # Count successes and failures
           success=0
