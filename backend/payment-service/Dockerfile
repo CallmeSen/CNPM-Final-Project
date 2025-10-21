@@ -1,5 +1,5 @@
 # Multi-stage build for payment-service
-FROM node:24.8.0-alpine AS builder
+FROM node:24.8.0 AS builder
 
 # Set working directory
 WORKDIR /app
@@ -7,8 +7,11 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && \
+# Install dependencies with retry config
+RUN npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 5 && \
+    npm ci && \
     npm cache clean --force
 
 # Copy source code
@@ -18,20 +21,23 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:24.8.0-alpine
+FROM node:24.8.0
 
 # Set working directory
 WORKDIR /app
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001
+RUN groupadd --gid 1001 nodejs && \
+    useradd --uid 1001 --gid nodejs --shell /bin/bash --create-home nestjs
 
 # Copy package files
 COPY package*.json ./
 
-# Install only production dependencies
-RUN npm ci --only=production && \
+# Install only production dependencies with retry config
+RUN npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 5 && \
+    npm ci --only=production && \
     npm cache clean --force
 
 # Copy built application from builder

@@ -20,7 +20,4 @@ coverage
 *.log
 .eslintrc.*
 .prettierrc
-tsconfig.json
-jest.config.js
-jest.setup.js
 
