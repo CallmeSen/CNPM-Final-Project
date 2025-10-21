@@ -1,5 +1,5 @@
 # Multi-stage build for restaurant frontend (Next.js)
-FROM node:24.8.0-alpine AS deps
+FROM node:24.8.0 AS deps
 
 # Install dependencies only when needed
 WORKDIR /app
@@ -7,11 +7,14 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with retry config
+RUN npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 5 && \
+    npm ci
 
 # Builder stage
-FROM node:24.8.0-alpine AS builder
+FROM node:24.8.0 AS builder
 
 WORKDIR /app
 
@@ -22,23 +25,23 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Set environment variable for production build
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
 
 # Build Next.js application
 RUN npm run build
 
 # Production stage
-FROM node:24.8.0-alpine AS runner
+FROM node:24.8.0 AS runner
 
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
+RUN groupadd --gid 1001 nodejs && \
+    useradd --uid 1001 --gid nodejs --shell /bin/bash --create-home nextjs
 
 # Copy necessary files
 COPY --from=builder /app/next.config.ts ./

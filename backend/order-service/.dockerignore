@@ -21,6 +21,4 @@ test
 *.test.ts
 .eslintrc.js
 .prettierrc
-tsconfig.json
-tsconfig.build.json
 

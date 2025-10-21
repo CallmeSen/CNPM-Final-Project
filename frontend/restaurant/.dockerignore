@@ -20,5 +20,4 @@ coverage
 *.log
 .eslintrc.*
 .prettierrc
-tsconfig.json
 
