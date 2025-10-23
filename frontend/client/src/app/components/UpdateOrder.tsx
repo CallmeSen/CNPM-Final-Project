@@ -55,7 +55,7 @@ const UpdateOrder = ({ addOrder }: UpdateOrderProps) => {
       }
 
       try {
-        const response = await axios.get<FetchOrderResponse>(`http://localhost:5005/api/orders/${id}`, {
+        const response = await axios.get<FetchOrderResponse>(`/api/orders/${id}`, {
           headers: token
             ? {
                 Authorization: `Bearer ${token}`,
@@ -167,7 +167,7 @@ const UpdateOrder = ({ addOrder }: UpdateOrderProps) => {
     };
 
     try {
-      const response = await axios.patch(`http://localhost:5005/api/orders/${id}`, updatedOrder, {
+      const response = await axios.patch(`/api/orders/${id}`, updatedOrder, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

@@ -13,9 +13,6 @@ import styles from "../../styles/checkout.module.css";
 const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
-const ORDER_SERVICE_BASE_URL = process.env.NEXT_PUBLIC_ORDER_SERVICE_URL ?? "http://localhost:5005";
-const PAYMENT_SERVICE_BASE_URL = process.env.NEXT_PUBLIC_PAYMENT_SERVICE_URL ?? "http://localhost:5004";
-
 type PaymentMethodOption = "stripe" | "cash";
 
 type PendingOrderItem = {
@@ -26,6 +23,8 @@ type PendingOrderItem = {
 };
 
 type PendingOrder = {
+  _id?: string;
+  orderId?: string;
   customerId?: string;
   restaurantId?: string;
   items?: PendingOrderItem[];
@@ -488,7 +487,7 @@ const CashPaymentSection = ({
 
     try {
       await axios.post(
-        `${ORDER_SERVICE_BASE_URL}/api/orders`,
+        "/api/orders",
         payload,
         {
           headers: {
@@ -606,8 +605,8 @@ const StripePaymentSection = ({
       resolvedCustomerId = billingDetails.fullName || "guest";
     }
 
-    return {
-      orderId: `ORDER-${Date.now()}`,
+    const payload = {
+      orderId: order?.orderId || `ORDER-${Date.now()}`,
       userId: resolvedCustomerId,
       amount: amountInCents / 100,
       currency: "usd",
@@ -616,7 +615,15 @@ const StripePaymentSection = ({
       email: billingDetails.email,
       phone: billingDetails.phone ?? "+1234567890",
     };
-  }, [amountInCents, billingDetails, order?.customerId]);
+
+    console.log("💳 Payment payload prepared:", {
+      orderId: payload.orderId,
+      orderHasOrderId: !!order?.orderId,
+      orderObject: order,
+    });
+
+    return payload;
+  }, [amountInCents, billingDetails, order]);
 
   useEffect(() => {
     const initialisePaymentIntent = async () => {
@@ -631,7 +638,9 @@ const StripePaymentSection = ({
       hasInitialised.current = true;
 
       try {
-        const response = await axios.post(`${PAYMENT_SERVICE_BASE_URL}/api/payment/process`, paymentPayload);
+        console.log("🚀 Calling payment API with payload:", paymentPayload);
+        const response = await axios.post("/api/payment/process", paymentPayload);
+        console.log("✅ Payment API response:", response.data);
 
         if (response.data?.paymentStatus === "Paid" || response.data?.disablePayment) {
           setSuccess("This order has already been paid.");
@@ -706,62 +715,24 @@ const StripePaymentSection = ({
       }
 
       if (paymentIntent?.status === "succeeded") {
-        setSuccess("Payment successful! Creating your order...");
+        setSuccess("Payment successful! Your order has been placed.");
         setPaymentDisabled(true);
 
-        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-        const { payload, error: payloadError } = buildOrderSubmissionPayload(order, token);
-
-        if (!payload) {
-          setPaymentDisabled(false);
-          setIsSubmitting(false);
-          setError(payloadError ?? "Payment succeeded but we could not prepare your order. Please try again.");
-          return;
-        }
-
-        try {
-          await axios.post(
-            `${ORDER_SERVICE_BASE_URL}/api/orders`,
-            payload,
-            {
-              headers: {
-                Authorization: token ? `Bearer ${token}` : "",
-                "Content-Type": "application/json",
-              },
+        // Order already created in CreateOrderFromCart, just clear cart
+        clearCart();
+        if (typeof window !== "undefined") {
+          ["pendingOrder", "cart", "cart_guest"].forEach((key) => {
+            try {
+              localStorage.removeItem(key);
+            } catch (e) {
+              console.error(`Failed to remove ${key}`, e);
             }
-          );
-
-          // Clear cart from CartContext and localStorage
-          clearCart();
-          if (typeof window !== "undefined") {
-            ["pendingOrder", "cart", "cart_guest"].forEach((key) => {
-              try {
-                localStorage.removeItem(key);
-              } catch (e) {
-                console.error(`Failed to remove ${key}`, e);
-              }
-            });
-          }
-
-          setSuccess("Payment successful! Your order has been placed.");
-          setTimeout(() => {
-            router.push("/customer/order-history");
-          }, 2000);
-        } catch (orderError) {
-          if (axios.isAxiosError(orderError)) {
-            console.error("Failed to create order", {
-              status: orderError.response?.status,
-              data: orderError.response?.data,
-              message: orderError.message,
-              payload,
-            });
-          } else {
-            console.error("Failed to create order", orderError);
-          }
-          setError(
-            `Payment succeeded but we could not create your order. Please contact support with payment id ${paymentIntent.id}.`
-          );
+          });
         }
+
+        setTimeout(() => {
+          router.push("/customer/order-history");
+        }, 2000);
       } else {
         setError("Payment did not complete. Please try again.");
       }

@@ -1,8 +1,13 @@
 import type { NextConfig } from "next";
-import { config } from "dotenv";
-import { resolve } from "path";
 
-config({ path: resolve(__dirname, "../../.env") });
+// In Docker, env vars are injected at runtime, not from .env files
+// For local dev, dotenv loads from ../../.env
+const isDevelopment = process.env.NODE_ENV !== "production";
+if (isDevelopment) {
+  const { config } = require("dotenv");
+  const { resolve } = require("path");
+  config({ path: resolve(__dirname, "../../.env") });
+}
 
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL ?? "http://localhost:5001";
 const RESTAURANT_SERVICE_URL = process.env.RESTAURANT_SERVICE_URL ?? "http://localhost:5002";
@@ -43,6 +48,10 @@ const nextConfig: NextConfig = {
       {
         source: "/api/payment/:path*",
         destination: `${PAYMENT_SERVICE_URL}/api/payment/:path*`,
+      },
+      {
+        source: "/uploads/:path*",
+        destination: `${RESTAURANT_SERVICE_URL}/uploads/:path*`,
       },
     ];
   },

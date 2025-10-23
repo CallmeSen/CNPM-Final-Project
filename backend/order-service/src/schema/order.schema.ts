@@ -18,6 +18,9 @@ export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);
 
 @Schema({ timestamps: true })
 export class Order {
+  @Prop({ unique: true, sparse: true })
+  orderId: string;
+
   @Prop({ required: true })
   customerId: string;
 

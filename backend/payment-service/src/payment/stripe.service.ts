@@ -5,6 +5,7 @@ import { Request, Response } from 'express';
 import { PaymentService } from './payment.service';
 import { EmailService } from './email.service';
 import { TwilioService } from './twilio.service';
+import axios from 'axios';
 
 @Injectable()
 export class StripeService {
@@ -26,13 +27,20 @@ export class StripeService {
   async handleWebhook(req: Request, res: Response) {
     this.logger.log('Webhook received');
     const sig = req.headers['stripe-signature'];
+    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+    this.logger.log(`Using webhook secret: ${webhookSecret?.substring(0, 20)}...`);
+    
+    // Use rawBody if available, otherwise use body
+    const rawBody = (req as any).rawBody || req.body;
+    this.logger.log(`Payload type: ${Buffer.isBuffer(rawBody) ? 'Buffer' : typeof rawBody}`);
+    
     let event;
 
     try {
       event = this.stripe.webhooks.constructEvent(
-        req.body,
+        rawBody,
         sig as string,
-        this.configService.get<string>('STRIPE_WEBHOOK_SECRET')!,
+        webhookSecret!,
       );
       this.logger.log(`✅ Webhook event verified: ${event.type}`);
     } catch (err) {
@@ -103,6 +111,30 @@ export class StripeService {
         this.logger.log(
           `✅ Payment for Order ${payment.orderId} updated to Paid.`,
         );
+
+        // Update order status in order-service
+        try {
+          const orderServiceUrl = this.configService.get<string>(
+            'ORDER_SERVICE_URL',
+            'http://localhost:5005',
+          );
+          await axios.patch(
+            `${orderServiceUrl}/api/orders/internal/${payment.orderId}/status`,
+            { status: 'Confirmed' },
+            {
+              headers: { 'Content-Type': 'application/json' },
+              timeout: 5000,
+            },
+          );
+          this.logger.log(
+            `✅ Order ${payment.orderId} status updated to Confirmed in order-service`,
+          );
+        } catch (orderUpdateError) {
+          this.logger.error(
+            `❌ Failed to update order status in order-service: ${orderUpdateError.message}`,
+          );
+          // Continue execution - payment is still marked as Paid
+        }
 
         if (customerPhone) {
           const smsMessage = `Your payment for Order ${payment.orderId} was successful!`;

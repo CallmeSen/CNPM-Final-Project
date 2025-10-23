@@ -42,7 +42,9 @@ export class PaymentController {
       const sanitizedPhone =
         typeof rawPhone === 'string' ? rawPhone.trim() : '';
 
-      this.logger.log(`Processing payment request for order ${orderId}`);
+      this.logger.log(`🔵 Processing payment request for order ${orderId}`);
+      this.logger.log(`📦 Full payment request body:`, JSON.stringify(body, null, 2));
+      
       if (!sanitizedPhone) {
         this.logger.warn(
           `No phone number provided for order ${orderId}. SMS notifications will be skipped.`,

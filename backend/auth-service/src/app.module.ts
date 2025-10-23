@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -22,6 +23,12 @@ import { join } from 'path';
         uri:
           config.get<string>('MONGO_AUTH_URL'),
       }),
+    }),
+    PrometheusModule.register({
+      defaultMetrics: {
+        enabled: true,
+      },
+      path: '/metrics',
     }),
     AuthModule,
     UserManagementModule,

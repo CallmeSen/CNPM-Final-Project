@@ -43,7 +43,8 @@ const buildServiceUrl = (baseUrl: string, path: string) => {
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
-  if (shouldProxyApi && normalizedPath.startsWith("/api/")) {
+  // Use proxy for /api/* and /uploads/* paths
+  if (shouldProxyApi && (normalizedPath.startsWith("/api/") || normalizedPath.startsWith("/uploads/"))) {
     return normalizedPath;
   }
 

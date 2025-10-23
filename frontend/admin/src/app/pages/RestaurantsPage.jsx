@@ -44,13 +44,16 @@ function RestaurantsPage() {
   }, []);
 
   const handleEditClick = (restaurant) => {
-    setEditing(restaurant._id);
+    console.log('Edit clicked:', restaurant);
+    console.log('Restaurant ID:', restaurant.id);
+    setEditing(restaurant.id);
     setFormData({
       name: restaurant.name,
       ownerName: restaurant.ownerName,
       location: restaurant.location,
       contactNumber: restaurant.contactNumber,
     });
+    console.log('Editing state set to:', restaurant.id);
   };
 
   const handleInputChange = (e) => {
@@ -73,7 +76,7 @@ function RestaurantsPage() {
       if (res.ok) {
         setRestaurants(
           restaurants.map((rest) =>
-            rest._id === editing ? { ...rest, ...formData } : rest
+            rest.id === editing ? { ...rest, ...formData } : rest
           )
         );
         setEditing(null);
@@ -97,7 +100,7 @@ function RestaurantsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setRestaurants(restaurants.filter((r) => r._id !== id));
+        setRestaurants(restaurants.filter((r) => r.id !== id));
         alert(data.message);
       } else {
         alert(data.message || 'Delete failed');
@@ -150,28 +153,68 @@ function RestaurantsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredRestaurants.map((rest) => (
-                <tr key={rest._id}>
+              {filteredRestaurants.map((rest, index) => (
+                <tr key={rest.id || `restaurant-${index}`}>
                   <td>{rest.name}</td>
                   <td>{rest.ownerName}</td>
                   <td>{rest.location}</td>
                   <td>{rest.contactNumber}</td>
                   <td className="action-buttons">
                     <button className="btn-icon edit" onClick={() => handleEditClick(rest)}><FaEdit /></button>
-                    <button className="btn-icon delete" onClick={() => handleDelete(rest._id)}><FaTrash /></button>
+                    <button className="btn-icon delete" onClick={() => handleDelete(rest.id)}><FaTrash /></button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>        {editing && (
-          <div className="edit-form">
-            <div className="edit-form-content">
+        </div>
+
+        {editing && (
+          <div className="modal-overlay" onClick={(e) => {
+            if (e.target.className === 'modal-overlay') setEditing(null);
+          }}>
+            <div className="modal-content">
               <h3>Edit Restaurant</h3>
-              <input type="text" name="name" placeholder="Restaurant Name" value={formData.name} onChange={handleInputChange} />
-              <input type="text" name="ownerName" placeholder="Owner Name" value={formData.ownerName} onChange={handleInputChange} />
-              <input type="text" name="location" placeholder="Location" value={formData.location} onChange={handleInputChange} />
-              <input type="text" name="contactNumber" placeholder="Contact Number" value={formData.contactNumber} onChange={handleInputChange} />
+              <div className="form-group">
+                <label>Restaurant Name</label>
+                <input 
+                  type="text" 
+                  name="name" 
+                  placeholder="Restaurant Name" 
+                  value={formData.name} 
+                  onChange={handleInputChange} 
+                />
+              </div>
+              <div className="form-group">
+                <label>Owner Name</label>
+                <input 
+                  type="text" 
+                  name="ownerName" 
+                  placeholder="Owner Name" 
+                  value={formData.ownerName} 
+                  onChange={handleInputChange} 
+                />
+              </div>
+              <div className="form-group">
+                <label>Location</label>
+                <input 
+                  type="text" 
+                  name="location" 
+                  placeholder="Location" 
+                  value={formData.location} 
+                  onChange={handleInputChange} 
+                />
+              </div>
+              <div className="form-group">
+                <label>Contact Number</label>
+                <input 
+                  type="text" 
+                  name="contactNumber" 
+                  placeholder="Contact Number" 
+                  value={formData.contactNumber} 
+                  onChange={handleInputChange} 
+                />
+              </div>
               <div className="form-actions">
                 <button onClick={() => setEditing(null)} className="btn btn-secondary">Cancel</button>
                 <button onClick={handleSaveEdit} className="btn btn-primary">Save Changes</button>

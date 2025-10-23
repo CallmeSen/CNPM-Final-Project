@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ReportsModule } from './reports/reports.module';
@@ -39,6 +40,12 @@ const envFilePaths = [
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: { expiresIn: '7d' },
       }),
+    }),
+    PrometheusModule.register({
+      defaultMetrics: {
+        enabled: true,
+      },
+      path: '/metrics',
     }),
     RestaurantsModule,
     FoodItemsModule,
