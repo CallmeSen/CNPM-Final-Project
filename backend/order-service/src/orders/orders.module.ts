@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { OrdersController } from './orders.controller';
+import { OrdersInternalController } from './orders-internal.controller';
 import { OrdersService } from './orders.service';
 import { Order, OrderSchema } from '../schema/order.schema';
 import { OrdersGateway } from './orders.gateway';
@@ -11,7 +12,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
   imports: [
     MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
   ],
-  controllers: [OrdersController],
+  controllers: [OrdersController, OrdersInternalController],
   providers: [OrdersService, OrdersGateway, JwtAuthGuard, RolesGuard],
 })
 export class OrdersModule {}

@@ -38,7 +38,7 @@ const DeleteOrder = () => {
     }
 
     axios
-      .get<Order>(`http://localhost:5005/api/orders/${id}`, {
+      .get<Order>(`/api/orders/${id}`, {
         headers: token
           ? {
               Authorization: `Bearer ${token}`,
@@ -63,7 +63,7 @@ const DeleteOrder = () => {
     }
 
     axios
-      .delete(`http://localhost:5005/api/orders/${id}`, {
+      .delete(`/api/orders/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

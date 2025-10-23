@@ -191,7 +191,7 @@ const OrderForm = ({ addOrder }: OrderFormProps) => {
     };
 
     try {
-      await axios.post("http://localhost:5005/api/orders", payload, {
+      await axios.post("/api/orders", payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

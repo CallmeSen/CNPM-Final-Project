@@ -202,16 +202,6 @@ function RestaurantOrders() {
                       </span>
                     </div>
                     <div className="order-badges">
-                      <span
-                        className="badge payment-badge"
-                        style={{
-                          background:
-                            PAYMENT_STATUS_MAP[order.paymentStatus]?.color ||
-                            '#999',
-                        }}
-                      >
-                        {order.paymentStatus}
-                      </span>
                       <span className="badge status-badge">{order.status}</span>
                     </div>
                   </div>
@@ -259,15 +249,6 @@ function RestaurantOrders() {
                         ))}
                       </select>
                     </div>
-
-                    {order.paymentStatus !== 'Paid' && (
-                      <button
-                        className="btn-mark-paid"
-                        onClick={() => updatePaymentStatus(order._id, 'Paid')}
-                      >
-                        Mark as Paid
-                      </button>
-                    )}
                   </div>
                 </div>
               ))}

@@ -18,6 +18,20 @@ FROM node:24.8.0 AS builder
 
 WORKDIR /app
 
+# Accept build arguments for service URLs
+ARG AUTH_SERVICE_URL=http://localhost:5001
+ARG RESTAURANT_SERVICE_URL=http://localhost:5002
+ARG ORDER_SERVICE_URL=http://localhost:5005
+ARG PAYMENT_SERVICE_URL=http://localhost:5004
+ARG REACT_APP_STRIPE_PUBLISHABLE_KEY
+
+# Set as environment variables for next.config.ts
+ENV AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
+ENV RESTAURANT_SERVICE_URL=${RESTAURANT_SERVICE_URL}
+ENV ORDER_SERVICE_URL=${ORDER_SERVICE_URL}
+ENV PAYMENT_SERVICE_URL=${PAYMENT_SERVICE_URL}
+ENV REACT_APP_STRIPE_PUBLISHABLE_KEY=${REACT_APP_STRIPE_PUBLISHABLE_KEY}
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 

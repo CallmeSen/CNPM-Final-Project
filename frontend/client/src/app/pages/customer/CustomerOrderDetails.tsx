@@ -28,9 +28,6 @@ type Order = {
   items: OrderItem[];
 };
 
-const ORDER_SERVICE_BASE_URL =
-  process.env.NEXT_PUBLIC_ORDER_SERVICE_URL ?? "http://localhost:5005";
-
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -115,7 +112,7 @@ const CustomerOrderDetails = () => {
         }
 
         const response = await axios.get<Order>(
-          `${ORDER_SERVICE_BASE_URL}/api/orders/${id}`,
+          `/api/orders/${id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

@@ -1,3 +1,0 @@
-module.exports=[27406,a=>{"use strict";a.s(["default",()=>c]);var b=a.i(87924);let c=({orders:a=[]})=>(0,b.jsxs)("div",{style:{padding:"2rem"},children:[(0,b.jsx)("h2",{children:"Your orders"}),0===a.length?(0,b.jsx)("p",{children:"You haven't created any orders yet."}):(0,b.jsx)("ul",{children:a.map((a,c)=>(0,b.jsxs)("li",{children:["Order #",c+1]},c))})]})}];
-
-//# sourceMappingURL=src_app_pages_orderManagement_OrderHome_tsx_b1ab35b4._.js.map

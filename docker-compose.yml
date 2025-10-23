@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ==================== Database ====================
   
@@ -36,7 +34,7 @@ services:
     ports:
       - "5001:5001"
     env_file:
-      - .env
+      - .env.docker
     networks:
       - cnpm-network
     restart: unless-stopped
@@ -57,9 +55,9 @@ services:
       dockerfile: Dockerfile
     container_name: cnpm-order-service
     ports:
-      - "5002:5002"
+      - "5005:5005"
     env_file:
-      - .env
+      - .env.docker
     networks:
       - cnpm-network
     restart: unless-stopped
@@ -69,7 +67,7 @@ services:
       auth-service:
         condition: service_started
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5005/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -82,11 +80,11 @@ services:
       dockerfile: Dockerfile
     container_name: cnpm-restaurant-service
     ports:
-      - "5003:5003"
+      - "5002:5002"
     env_file:
-      - .env
+      - .env.docker
     volumes:
-      - restaurant-uploads:/app/uploads
+      - ./backend/restaurant-service/uploads:/app/uploads
     networks:
       - cnpm-network
     restart: unless-stopped
@@ -94,7 +92,7 @@ services:
       mongodb:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5003/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -109,7 +107,7 @@ services:
     ports:
       - "5004:5004"
     env_file:
-      - .env
+      - .env.docker
     networks:
       - cnpm-network
     restart: unless-stopped
@@ -130,11 +128,17 @@ services:
     build:
       context: ./frontend/client
       dockerfile: Dockerfile
+      args:
+        - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://localhost:5001}
+        - RESTAURANT_SERVICE_URL=${RESTAURANT_SERVICE_URL:-http://localhost:5002}
+        - ORDER_SERVICE_URL=${ORDER_SERVICE_URL:-http://localhost:5005}
+        - PAYMENT_SERVICE_URL=${PAYMENT_SERVICE_URL:-http://localhost:5004}
+        - REACT_APP_STRIPE_PUBLISHABLE_KEY=${REACT_APP_STRIPE_PUBLISHABLE_KEY}
     container_name: cnpm-client
     ports:
       - "3000:3000"
     env_file:
-      - .env
+      - .env.docker
     networks:
       - cnpm-network
     restart: unless-stopped
@@ -155,11 +159,16 @@ services:
     build:
       context: ./frontend/admin
       dockerfile: Dockerfile
+      args:
+        - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://localhost:5001}
+        - RESTAURANT_SERVICE_URL=${RESTAURANT_SERVICE_URL:-http://localhost:5002}
+        - ORDER_SERVICE_URL=${ORDER_SERVICE_URL:-http://localhost:5005}
+        - PAYMENT_SERVICE_URL=${PAYMENT_SERVICE_URL:-http://localhost:5004}
     container_name: cnpm-admin
     ports:
       - "3001:3001"
     env_file:
-      - .env
+      - .env.docker
     networks:
       - cnpm-network
     restart: unless-stopped
@@ -180,11 +189,16 @@ services:
     build:
       context: ./frontend/restaurant
       dockerfile: Dockerfile
+      args:
+        - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://localhost:5001}
+        - RESTAURANT_SERVICE_URL=${RESTAURANT_SERVICE_URL:-http://localhost:5002}
+        - ORDER_SERVICE_URL=${ORDER_SERVICE_URL:-http://localhost:5005}
+        - PAYMENT_SERVICE_URL=${PAYMENT_SERVICE_URL:-http://localhost:5004}
     container_name: cnpm-restaurant
     ports:
       - "3002:3002"
     env_file:
-      - .env
+      - .env.docker
     networks:
       - cnpm-network
     restart: unless-stopped
@@ -198,6 +212,113 @@ services:
       retries: 3
       start_period: 40s
 
+  # ==================== Monitoring & Logging ====================
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cnpm-prometheus
+    env_file:
+      - .env
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cnpm-grafana
+    env_file:
+      - .env
+    ports:
+      - "${GRAFANA_PORT:-3030}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Node Exporter (for system metrics)
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: cnpm-node-exporter
+    env_file:
+      - .env
+    ports:
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    command:
+      - '--path.rootfs=/host'
+    pid: host
+
+  # Loki (Log aggregation)
+  loki:
+    image: grafana/loki:latest
+    container_name: cnpm-loki
+    env_file:
+      - .env
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Promtail (Log shipper)
+  promtail:
+    image: grafana/promtail:latest
+    container_name: cnpm-promtail
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    depends_on:
+      - loki
+
 # Networks
 networks:
   cnpm-network:
@@ -209,6 +330,10 @@ volumes:
     driver: local
   mongodb-config:
     driver: local
-  restaurant-uploads:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
     driver: local
 

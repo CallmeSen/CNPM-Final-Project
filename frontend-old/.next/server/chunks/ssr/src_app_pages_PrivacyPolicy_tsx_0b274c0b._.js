@@ -1,3 +1,0 @@
-module.exports=[14443,a=>{"use strict";a.s(["default",()=>e]);var b=a.i(87924),c=a.i(8226),d=a.i(1453);let e=()=>(0,b.jsxs)(b.Fragment,{children:[(0,b.jsx)(c.default,{}),(0,b.jsxs)("div",{className:"privacy-container",children:[(0,b.jsx)("h1",{children:"Privacy Policy"}),(0,b.jsx)("p",{children:"Your privacy is important to us. We ensure that your data is protected and used responsibly."})]}),(0,b.jsx)(d.default,{})]})}];
-
-//# sourceMappingURL=src_app_pages_PrivacyPolicy_tsx_0b274c0b._.js.map

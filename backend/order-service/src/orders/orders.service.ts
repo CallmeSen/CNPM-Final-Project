@@ -26,11 +26,21 @@ export class OrdersService {
 
   async create(createOrderDto: CreateOrderDto): Promise<OrderDocument> {
     const totalPrice = this.calculateTotal(createOrderDto.items);
+    const orderId = `ORDER-${Date.now()}`;
+    console.log(`🔵 Creating order with orderId: ${orderId}`);
     const order = new this.orderModel({
       ...createOrderDto,
+      orderId,
       totalPrice,
     });
-    return order.save();
+    const savedOrder = await order.save();
+    console.log(`✅ Order created successfully:`, {
+      _id: savedOrder._id,
+      orderId: savedOrder.orderId,
+      customerId: savedOrder.customerId,
+      totalPrice: savedOrder.totalPrice,
+    });
+    return savedOrder;
   }
 
   async findAll(user: AuthenticatedUser): Promise<OrderDocument[]> {
@@ -50,6 +60,11 @@ export class OrdersService {
     if (!order) {
       throw new NotFoundException('Order not found');
     }
+    return order;
+  }
+
+  async findByOrderId(orderId: string): Promise<OrderDocument | null> {
+    const order = await this.orderModel.findOne({ orderId }).exec();
     return order;
   }
 

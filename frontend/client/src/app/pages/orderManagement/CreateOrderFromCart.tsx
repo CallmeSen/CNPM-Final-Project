@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { ChangeEvent, MouseEvent, useContext, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, MouseEvent, useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { BsArrowLeftCircle } from "react-icons/bs";
@@ -66,6 +66,7 @@ const CreateOrderFromCart = () => {
   const [customerName, setCustomerName] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
   const [isLoadingCustomer, setIsLoadingCustomer] = useState(true);
+  const isSubmitting = useRef(false); // Prevent duplicate submissions
 
   const token = useMemo(() => {
     if (typeof window === "undefined") {
@@ -275,12 +276,24 @@ const CreateOrderFromCart = () => {
 
   const handleSubmit = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
+    event.stopPropagation(); // Prevent event bubbling
+    
+    console.log("🔵 handleSubmit called, isSubmitting:", isSubmitting.current, "loading:", loading);
+    
+    // Prevent duplicate submissions
+    if (isSubmitting.current || loading) {
+      console.log("⚠️ Already submitting order, ignoring duplicate click");
+      return;
+    }
+    
+    isSubmitting.current = true;
     setLoading(true);
     setError("");
     setSuccess("");
 
     if (!validateForm()) {
       setLoading(false);
+      isSubmitting.current = false;
       return;
     }
 
@@ -315,21 +328,83 @@ const CreateOrderFromCart = () => {
         totalPrice: calculatedTotalPrice,
       };
 
+      // Check if there's already a pending order to avoid duplicates
+      const existingPendingOrder = typeof window !== "undefined" 
+        ? localStorage.getItem("pendingOrder") 
+        : null;
+      
+      if (existingPendingOrder) {
+        try {
+          const parsed = JSON.parse(existingPendingOrder);
+          if (parsed.orderId) {
+            console.log("⚠️ Found existing pending order, reusing:", parsed.orderId);
+            navigate("/checkout", {
+              state: {
+                orderData: parsed,
+                fromCart: true,
+              },
+            });
+            return;
+          }
+        } catch {
+          // Clear invalid data
+          localStorage.removeItem("pendingOrder");
+        }
+      }
+
+      // Create order on backend first to get orderId
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      
+      console.log("🔵 Creating order on backend...", orderPayload);
+      
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(orderPayload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Failed to create order:", response.status, errorText);
+        throw new Error(`Failed to create order: ${response.status} - ${errorText}`);
+      }
+
+      const createdOrder = await response.json();
+      console.log("✅ Order created successfully:", createdOrder);
+      
+      if (!createdOrder.orderId) {
+        console.error("⚠️ Warning: Order created but no orderId in response!", createdOrder);
+      }
+      
+      // Save order with orderId to localStorage
+      const orderWithId = {
+        ...orderPayload,
+        _id: createdOrder._id,
+        orderId: createdOrder.orderId,
+      };
+
+      console.log("💾 Saving order to localStorage:", orderWithId);
+
       if (typeof window !== "undefined") {
-        localStorage.setItem("pendingOrder", JSON.stringify(orderPayload));
+        localStorage.setItem("pendingOrder", JSON.stringify(orderWithId));
       }
 
       navigate("/checkout", {
         state: {
-          orderData: orderPayload,
+          orderData: orderWithId,
           fromCart: true,
         },
       });
     } catch (err) {
       console.error("Error preparing order", err);
       setError("Failed to prepare order. Please try again.");
+      isSubmitting.current = false; // Reset flag on error
     } finally {
       setLoading(false);
+      // Don't reset isSubmitting.current here to prevent re-submission after navigation
     }
   };
 

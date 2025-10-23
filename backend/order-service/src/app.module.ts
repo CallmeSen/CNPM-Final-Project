@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { OrdersModule } from './orders/orders.module';
 import { UsersModule } from './users/users.module';
 import { join } from 'path';
@@ -25,6 +26,12 @@ import { join } from 'path';
       useFactory: async (configService: ConfigService) => ({
         uri: configService.getOrThrow<string>('MONGO_ORDER_URL'),
       }),
+    }),
+    PrometheusModule.register({
+      defaultMetrics: {
+        enabled: true,
+      },
+      path: '/metrics',
     }),
     OrdersModule,
     UsersModule,
