@@ -80,10 +80,13 @@ describe('OrdersService', () => {
 
       const result = await service.create(dto as any);
 
-      expect(orderModel).toHaveBeenCalledWith({
-        ...dto,
-        totalPrice: 20,
-      });
+      expect(orderModel).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...dto,
+          orderId: expect.stringMatching(/^ORDER-\d+$/),
+          totalPrice: 20,
+        }),
+      );
       const createdDoc = (orderModel.mock.results[0].value as any);
       expect(createdDoc.save).toHaveBeenCalled();
       expect(result.totalPrice).toBe(20);
