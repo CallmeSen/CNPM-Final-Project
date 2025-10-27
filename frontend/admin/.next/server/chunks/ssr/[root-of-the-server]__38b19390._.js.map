@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 3, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"","debugId":null}},
+    {"offset": {"line": 15, "column": 0}, "map": {"version":3,"sources":["file:///E:/GitHub/CNPM-Final-Project/frontend/admin/src/app/page.tsx"],"sourcesContent":["import { redirect } from \"next/navigation\";\r\n\r\nconst HomePage = () => {\r\n  redirect(\"/login\");\r\n};\r\n\r\nexport default HomePage;\r\n"],"names":[],"mappings":";;;;AAAA;AAAA;;AAEA,MAAM,WAAW;IACf,IAAA,iMAAQ,EAAC;AACX;uCAEe","debugId":null}}]
+}
