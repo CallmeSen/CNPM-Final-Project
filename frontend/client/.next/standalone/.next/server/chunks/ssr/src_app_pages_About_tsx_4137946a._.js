@@ -1,0 +1,3 @@
+module.exports=[49251,a=>{"use strict";a.s(["default",()=>e]);var b=a.i(87924),c=a.i(8226),d=a.i(1453);let e=()=>(0,b.jsxs)(b.Fragment,{children:[(0,b.jsx)(c.default,{}),(0,b.jsxs)("div",{className:"about-container",children:[(0,b.jsx)("h1",{children:"About Us"}),(0,b.jsx)("p",{children:"Welcome to FoodieExpress! We are dedicated to delivering delicious food to your doorstep."})]}),(0,b.jsx)(d.default,{})]})}];
+
+//# sourceMappingURL=src_app_pages_About_tsx_4137946a._.js.map
