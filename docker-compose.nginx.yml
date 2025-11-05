@@ -1,0 +1,34 @@
+# Docker Compose Override for NGINX-only deployment
+# Use this to run only NGINX reverse proxy
+
+version: '3.8'
+
+services:
+  # Only include NGINX service
+  nginx:
+    build:
+      context: ./infra/nginx
+      dockerfile: Dockerfile
+    container_name: cnpm-nginx
+    ports:
+      - "80:80"
+      - "443:443"  # For SSL
+    env_file:
+      - .env.docker
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    volumes:
+      # Mount SSL certificates (for production)
+      - ./ssl:/etc/ssl/certs:ro
+      - ./ssl/private:/etc/ssl/private:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  cnpm-network:
+    external: true  # Use existing network from main docker-compose.yml
