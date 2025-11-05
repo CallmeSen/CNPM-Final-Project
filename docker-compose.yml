@@ -37,6 +37,8 @@ services:
       - "5001:5001"
     env_file:
       - .env.docker
+    volumes:
+      - ./backend/auth-service/uploads:/app/uploads
     networks:
       - cnpm-network
     restart: unless-stopped

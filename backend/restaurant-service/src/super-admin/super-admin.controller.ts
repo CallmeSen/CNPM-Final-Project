@@ -4,13 +4,10 @@
   Delete,
   Get,
   Param,
-  Post,
   Put,
   UseGuards,
 } from '@nestjs/common';
 import { SuperAdminService } from './super-admin.service';
-import { RegisterSuperAdminDto } from './dto/register-super-admin.dto';
-import { LoginSuperAdminDto } from './dto/login-super-admin.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -20,15 +17,9 @@ import { UserRole } from '../common/enums/user-role.enum';
 export class SuperAdminController {
   constructor(private readonly superAdminService: SuperAdminService) {}
 
-  @Post('register')
-  register(@Body() dto: RegisterSuperAdminDto) {
-    return this.superAdminService.register(dto);
-  }
-
-  @Post('login')
-  login(@Body() dto: LoginSuperAdminDto) {
-    return this.superAdminService.login(dto);
-  }
+  // Authentication endpoints removed - now handled by auth-service
+  // POST /register -> auth-service: POST /api/auth/register/superadmin
+  // POST /login -> auth-service: POST /api/auth/login/superadmin
 
   @Get('restaurants')
   @UseGuards(JwtAuthGuard, RolesGuard)
