@@ -5,17 +5,19 @@ services:
   mongodb:
     container_name: mongodb-cnpm
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin123
-    command: ["mongod"]
+      MONGODB_INITDB_ROOT_USERNAME: admin
+      MONGODB_INITDB_ROOT_PASSWORD: admin123
+    command: ["mongod", "--bind_ip_all"]
     image: mongodb/mongodb-community-server:latest
     volumes:
-      - 'C:/Users/Tuan Huynh/Documents/mongodata:/data/db'
+      - mongodata:/data/db
+      - mongoconfig:/data/configdb
     ports:
       - "28017:27017"
     networks:
       - cnpm-network
     restart: unless-stopped
+    stop_grace_period: 30s
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -129,10 +131,10 @@ services:
       context: ./frontend/client
       dockerfile: Dockerfile
       args:
-        - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://localhost:5001}
-        - RESTAURANT_SERVICE_URL=${RESTAURANT_SERVICE_URL:-http://localhost:5002}
-        - ORDER_SERVICE_URL=${ORDER_SERVICE_URL:-http://localhost:5005}
-        - PAYMENT_SERVICE_URL=${PAYMENT_SERVICE_URL:-http://localhost:5004}
+        - AUTH_SERVICE_URL=http://auth-service:5001
+        - RESTAURANT_SERVICE_URL=http://restaurant-service:5002
+        - ORDER_SERVICE_URL=http://order-service:5005
+        - PAYMENT_SERVICE_URL=http://payment-service:5004
         - REACT_APP_STRIPE_PUBLISHABLE_KEY=${REACT_APP_STRIPE_PUBLISHABLE_KEY}
     container_name: cnpm-client
     ports:
@@ -160,10 +162,10 @@ services:
       context: ./frontend/admin
       dockerfile: Dockerfile
       args:
-        - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://localhost:5001}
-        - RESTAURANT_SERVICE_URL=${RESTAURANT_SERVICE_URL:-http://localhost:5002}
-        - ORDER_SERVICE_URL=${ORDER_SERVICE_URL:-http://localhost:5005}
-        - PAYMENT_SERVICE_URL=${PAYMENT_SERVICE_URL:-http://localhost:5004}
+        - AUTH_SERVICE_URL=http://auth-service:5001
+        - RESTAURANT_SERVICE_URL=http://restaurant-service:5002
+        - ORDER_SERVICE_URL=http://order-service:5005
+        - PAYMENT_SERVICE_URL=http://payment-service:5004
     container_name: cnpm-admin
     ports:
       - "3001:3001"
@@ -190,10 +192,10 @@ services:
       context: ./frontend/restaurant
       dockerfile: Dockerfile
       args:
-        - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://localhost:5001}
-        - RESTAURANT_SERVICE_URL=${RESTAURANT_SERVICE_URL:-http://localhost:5002}
-        - ORDER_SERVICE_URL=${ORDER_SERVICE_URL:-http://localhost:5005}
-        - PAYMENT_SERVICE_URL=${PAYMENT_SERVICE_URL:-http://localhost:5004}
+        - AUTH_SERVICE_URL=http://auth-service:5001
+        - RESTAURANT_SERVICE_URL=http://restaurant-service:5002
+        - ORDER_SERVICE_URL=http://order-service:5005
+        - PAYMENT_SERVICE_URL=http://payment-service:5004
     container_name: cnpm-restaurant
     ports:
       - "3002:3002"
@@ -212,112 +214,34 @@ services:
       retries: 3
       start_period: 40s
 
-  # ==================== Monitoring & Logging ====================
+  # ==================== NGINX Reverse Proxy ====================
 
-  # Prometheus
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: cnpm-prometheus
-    env_file:
-      - .env
+  nginx:
+    build:
+      context: ./infra/nginx
+      dockerfile: Dockerfile
+    container_name: cnpm-nginx
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-    networks:
-      - cnpm-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-
-  # Grafana
-  grafana:
-    image: grafana/grafana:latest
-    container_name: cnpm-grafana
+      - "80:80"
     env_file:
-      - .env
-    ports:
-      - "${GRAFANA_PORT:-3030}:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
-      - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - .env.docker
     networks:
       - cnpm-network
     restart: unless-stopped
     depends_on:
-      - prometheus
+      - auth-service
+      - order-service
+      - restaurant-service
+      - payment-service
+      - client
+      - admin
+      - restaurant
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 10s
-
-  # Node Exporter (for system metrics)
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: cnpm-node-exporter
-    env_file:
-      - .env
-    ports:
-      - "${NODE_EXPORTER_PORT:-9100}:9100"
-    networks:
-      - cnpm-network
-    restart: unless-stopped
-    command:
-      - '--path.rootfs=/host'
-    pid: host
-
-  # Loki (Log aggregation)
-  loki:
-    image: grafana/loki:latest
-    container_name: cnpm-loki
-    env_file:
-      - .env
-    ports:
-      - "${LOKI_PORT:-3100}:3100"
-    volumes:
-      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
-      - loki-data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
-    networks:
-      - cnpm-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-
-  # Promtail (Log shipper)
-  promtail:
-    image: grafana/promtail:latest
-    container_name: cnpm-promtail
-    volumes:
-      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/config.yml
-    networks:
-      - cnpm-network
-    restart: unless-stopped
-    depends_on:
-      - loki
 
 # Networks
 networks:
@@ -326,6 +250,10 @@ networks:
 
 # Volumes
 volumes:
+  mongodata:
+    driver: local
+  mongoconfig:
+    driver: local
   mongodb-data:
     driver: local
   mongodb-config:

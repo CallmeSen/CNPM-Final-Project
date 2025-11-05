@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
-
+mongodata/
+prompts/
+chatmodes/
 # Environment
 .env
 .env.local
@@ -12,3 +14,5 @@ dist/
 # Misc
 *.log
 *.tmp
+CLAUDE.md
+copilot-instructions.md

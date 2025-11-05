@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cnpm-food-delivery
+  labels:
+    name: cnpm-food-delivery
+    environment: production
