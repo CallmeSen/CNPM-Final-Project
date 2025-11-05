@@ -140,7 +140,7 @@ function RestaurantRegister() {
       formData.append('email', form.email);
       formData.append('password', form.password);
 
-      const res = await fetch('http://localhost:5002/api/restaurant/register', {
+      const res = await fetch('http://localhost:5001/api/auth/register/restaurant', {
         method: 'POST',
         body: formData,
       });

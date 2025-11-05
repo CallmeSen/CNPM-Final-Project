@@ -1,8 +1,6 @@
 ﻿import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { JwtModule } from '@nestjs/jwt';
-import type { StringValue } from 'ms';
 import { SuperAdminController } from './super-admin.controller';
 import { SuperAdminService } from './super-admin.service';
 import { SuperAdmin, SuperAdminSchema } from '../schema/super-admin.schema';
@@ -14,20 +12,6 @@ import { RestaurantsModule } from '../restaurants/restaurants.module';
     MongooseModule.forFeature([
       { name: SuperAdmin.name, schema: SuperAdminSchema },
     ]),
-    JwtModule.registerAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const expiresIn =
-          configService.get<StringValue>('JWT_EXPIRES_IN') ?? '7d';
-
-        return {
-          secret: configService.get<string>('JWT_SECRET'),
-          signOptions: {
-            expiresIn,
-          },
-        };
-      },
-    }),
     RestaurantsModule,
   ],
   controllers: [SuperAdminController],

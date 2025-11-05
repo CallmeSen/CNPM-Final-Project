@@ -6,10 +6,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Customer, CustomerDocument } from '../../schemas/customer.schema';
 import { Admin, AdminDocument } from '../../schemas/admin.schema';
-import {
-  RestaurantAdmin,
-  RestaurantAdminDocument,
-} from '../../schemas/restaurant-admin.schema';
+import { Restaurant, RestaurantDocument } from '../../schemas/restaurant.schema';
+import { SuperAdmin, SuperAdminDocument } from '../../schemas/super-admin.schema';
 import {
   DeliveryPersonnel,
   DeliveryPersonnelDocument,
@@ -33,8 +31,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly customerModel: Model<CustomerDocument>,
     @InjectModel(Admin.name)
     private readonly adminModel: Model<AdminDocument>,
-    @InjectModel(RestaurantAdmin.name)
-    private readonly restaurantAdminModel: Model<RestaurantAdminDocument>,
+    @InjectModel(Restaurant.name)
+    private readonly restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(SuperAdmin.name)
+    private readonly superAdminModel: Model<SuperAdminDocument>,
     @InjectModel(DeliveryPersonnel.name)
     private readonly deliveryPersonnelModel: Model<DeliveryPersonnelDocument>,
   ) {
@@ -88,16 +88,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         };
       }
       case 'restaurant': {
-        const restaurantAdmin =
-          await this.restaurantAdminModel.findById(userId);
-        if (!restaurantAdmin) {
-          throw new UnauthorizedException('Restaurant admin not found');
+        const restaurant = await this.restaurantModel.findById(userId);
+        if (!restaurant) {
+          throw new UnauthorizedException('Restaurant not found');
         }
         return {
           userId,
           role,
-          email: restaurantAdmin.email,
-          name: `${restaurantAdmin.firstName} ${restaurantAdmin.lastName}`.trim(),
+          email: restaurant.admin.email,
+          name: restaurant.ownerName,
         };
       }
       case 'delivery': {

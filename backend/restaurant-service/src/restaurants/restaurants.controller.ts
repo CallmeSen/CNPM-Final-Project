@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Param,
-  Post,
   Put,
   UploadedFile,
   UnauthorizedException,
@@ -12,8 +11,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RestaurantsService } from './restaurants.service';
-import { RegisterRestaurantDto } from './dto/register-restaurant.dto';
-import { LoginRestaurantDto } from './dto/login-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { imageUploadConfig } from '../common/config/multer.config';
@@ -40,19 +37,9 @@ export class RestaurantsController {
     return user.restaurantId;
   }
 
-  @Post('register')
-  @UseInterceptors(FileInterceptor('profilePicture', imageUploadConfig))
-  register(
-    @Body() dto: RegisterRestaurantDto,
-    @UploadedFile() file?: Express.Multer.File,
-  ) {
-    return this.restaurantsService.register(dto, file);
-  }
-
-  @Post('login')
-  login(@Body() dto: LoginRestaurantDto) {
-    return this.restaurantsService.login(dto);
-  }
+  // Authentication endpoints removed - now handled by auth-service
+  // POST /register -> auth-service: POST /api/auth/register/restaurant
+  // POST /login -> auth-service: POST /api/auth/login/restaurant
 
   @Get('all')
   getPublicRestaurants() {
