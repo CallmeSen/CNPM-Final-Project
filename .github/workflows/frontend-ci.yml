@@ -164,8 +164,8 @@ jobs:
   client-app:
     name: Client App CI
     runs-on: ubuntu-latest
-    needs: [code-quality, security-audit]
-    if: github.event.inputs.skip_tests != 'true'
+    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles, bundle-size-check]
+    if: github.event.inputs.skip_tests != 'true' && always()
     defaults:
       run:
         working-directory: frontend/client
@@ -246,8 +246,8 @@ jobs:
   admin-app:
     name: Admin App CI (Next.js)
     runs-on: ubuntu-latest
-    needs: [code-quality, security-audit]
-    if: github.event.inputs.skip_tests != 'true'
+    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles, bundle-size-check]
+    if: github.event.inputs.skip_tests != 'true' && always()
     defaults:
       run:
         working-directory: frontend/admin
@@ -320,8 +320,8 @@ jobs:
   restaurant-app:
     name: Restaurant App CI
     runs-on: ubuntu-latest
-    needs: [code-quality, security-audit]
-    if: github.event.inputs.skip_tests != 'true'
+    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles, bundle-size-check]
+    if: github.event.inputs.skip_tests != 'true' && always()
     defaults:
       run:
         working-directory: frontend/restaurant
@@ -402,15 +402,43 @@ jobs:
   bundle-size-check:
     name: Bundle Size Analysis
     runs-on: ubuntu-latest
-    needs: [client-app, admin-app, restaurant-app]
-    if: always() && github.event_name == 'pull_request'
+    needs: [code-quality]
+    if: github.event_name == 'pull_request'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LATEST }}
+
+      - name: Install and build Client App
+        working-directory: frontend/client
+        run: |
+          npm ci
+          npm run build
+        env:
+          CI: false
+        continue-on-error: true
+
+      - name: Install and build Admin App
+        working-directory: frontend/admin
+        run: |
+          npm ci
+          npm run build
+        env:
+          CI: false
+        continue-on-error: true
+
+      - name: Install and build Restaurant App
+        working-directory: frontend/restaurant
+        run: |
+          npm ci
+          npm run build
+        env:
+          CI: false
         continue-on-error: true
 
       - name: Analyze bundle sizes
@@ -418,10 +446,17 @@ jobs:
           echo "Bundle Size Analysis"
           echo "======================="
           for app in client admin restaurant; do
-            if [ -d "${app}-build-24.8.0" ]; then
-              size=$(du -sh "${app}-build-24.8.0" | cut -f1)
+            if [ -d "frontend/${app}/.next" ]; then
+              size=$(du -sh "frontend/${app}/.next" | cut -f1)
               echo "$app: $size"
             fi
           done
+        continue-on-error: true
+
+      - name: Comment bundle size on PR
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Bundle sizes reported above"
+          echo "Consider adding bundle size comparison with main branch"
         continue-on-error: true
 
