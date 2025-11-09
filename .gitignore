@@ -3,10 +3,12 @@ node_modules/
 mongodata/
 prompts/
 chatmodes/
+backend/delivery_service/
 # Environment
 .env
 .env.local
 .env.docker
+infra/k8s/secrets.yaml
 # Builds
 build/
 dist/
@@ -15,4 +17,4 @@ dist/
 *.log
 *.tmp
 CLAUDE.md
-copilot-instructions.md
+.github/copilot-instructions.md

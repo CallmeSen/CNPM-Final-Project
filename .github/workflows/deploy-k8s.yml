@@ -1,0 +1,181 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - source
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'infra/k8s/**'
+      - '.github/workflows/deploy-k8s.yml'
+
+env:
+  DOCKER_REGISTRY: docker.io
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+
+jobs:
+  build-and-push-backend:
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        service:
+          - auth-service
+          - restaurant-service
+          - order-service
+          - payment-service
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend/${{ matrix.service }}
+          file: ./backend/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:buildcache,mode=max
+
+  build-and-push-frontend:
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        app:
+          - client
+          - admin
+          - restaurant
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push ${{ matrix.app }}-frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend/${{ matrix.app }}
+          file: ./frontend/${{ matrix.app }}/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app }}-frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app }}-frontend:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.app }}-frontend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.app }}-frontend:buildcache,mode=max
+
+  deploy-to-k8s:
+    needs: 
+      - build-and-push-backend
+      - build-and-push-frontend
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Kubeconfig
+        shell: bash
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Create namespace if not exists
+        run: |
+          kubectl get namespace cnpm-food-delivery || kubectl create namespace cnpm-food-delivery
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f infra/k8s/namespace.yaml
+          kubectl apply -f infra/k8s/secrets.yaml
+          kubectl apply -f infra/k8s/pvcs.yaml
+          kubectl apply -f infra/k8s/
+
+      - name: Debug image tags
+        run: |
+          echo "=== Backend Services ==="
+          echo "Auth Service: ${{ secrets.DOCKER_USERNAME }}/auth-service:latest"
+          echo "Restaurant Service: ${{ secrets.DOCKER_USERNAME }}/restaurant-service:latest"
+          echo "Order Service: ${{ secrets.DOCKER_USERNAME }}/order-service:latest"
+          echo "Payment Service: ${{ secrets.DOCKER_USERNAME }}/payment-service:latest"
+          echo ""
+          echo "=== Frontend Apps ==="
+          echo "Client Frontend: ${{ secrets.DOCKER_USERNAME }}/client-frontend:latest"
+          echo "Admin Frontend: ${{ secrets.DOCKER_USERNAME }}/admin-frontend:latest"
+          echo "Restaurant Frontend: ${{ secrets.DOCKER_USERNAME }}/restaurant-frontend:latest"
+
+      - name: Update Backend Deployments
+        run: |
+          kubectl set image deployment/auth-service auth-service=${{ secrets.DOCKER_USERNAME }}/auth-service:latest -n cnpm-food-delivery
+          kubectl set image deployment/restaurant-service restaurant-service=${{ secrets.DOCKER_USERNAME }}/restaurant-service:latest -n cnpm-food-delivery
+          kubectl set image deployment/order-service order-service=${{ secrets.DOCKER_USERNAME }}/order-service:latest -n cnpm-food-delivery
+          kubectl set image deployment/payment-service payment-service=${{ secrets.DOCKER_USERNAME }}/payment-service:latest -n cnpm-food-delivery
+
+      - name: Update Frontend Deployments
+        run: |
+          kubectl set image deployment/client-frontend client-frontend=${{ secrets.DOCKER_USERNAME }}/client-frontend:latest -n cnpm-food-delivery
+          kubectl set image deployment/admin-frontend admin-frontend=${{ secrets.DOCKER_USERNAME }}/admin-frontend:latest -n cnpm-food-delivery
+          kubectl set image deployment/restaurant-frontend restaurant-frontend=${{ secrets.DOCKER_USERNAME }}/restaurant-frontend:latest -n cnpm-food-delivery
+
+      - name: Wait for Backend Rollout
+        run: |
+          echo "Waiting for backend services to roll out..."
+          kubectl rollout status deployment/auth-service -n cnpm-food-delivery --timeout=5m
+          kubectl rollout status deployment/restaurant-service -n cnpm-food-delivery --timeout=5m
+          kubectl rollout status deployment/order-service -n cnpm-food-delivery --timeout=5m
+          kubectl rollout status deployment/payment-service -n cnpm-food-delivery --timeout=5m
+
+      - name: Wait for Frontend Rollout
+        run: |
+          echo "Waiting for frontend apps to roll out..."
+          kubectl rollout status deployment/client-frontend -n cnpm-food-delivery --timeout=5m
+          kubectl rollout status deployment/admin-frontend -n cnpm-food-delivery --timeout=5m
+          kubectl rollout status deployment/restaurant-frontend -n cnpm-food-delivery --timeout=5m
+
+      - name: Verify Deployment
+        run: |
+          echo "=== Pods Status ==="
+          kubectl get pods -n cnpm-food-delivery
+          echo ""
+          echo "=== Services ==="
+          kubectl get svc -n cnpm-food-delivery
+          echo ""
+          echo "=== Deployments ==="
+          kubectl get deployments -n cnpm-food-delivery
+
+      - name: Get LoadBalancer URL
+        run: |
+          echo "=== Access URLs ==="
+          NGINX_IP=$(kubectl get svc nginx-gateway -n cnpm-food-delivery -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          if [ -z "$NGINX_IP" ]; then
+            echo "LoadBalancer IP not assigned yet. Using port-forward instead:"
+            echo "Run: kubectl port-forward -n cnpm-food-delivery svc/nginx-gateway 8080:80"
+            echo "Then access: http://localhost:8080"
+          else
+            echo "Client App: http://$NGINX_IP"
+            echo "Admin App: http://$NGINX_IP/admin"
+            echo "Restaurant App: http://$NGINX_IP/restaurant"
+          fi

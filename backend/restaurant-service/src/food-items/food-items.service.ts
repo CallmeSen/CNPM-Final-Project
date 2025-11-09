@@ -2,32 +2,50 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { ConfigService } from '@nestjs/config';
 import { Model } from 'mongoose';
+import axios from 'axios';
 import { FoodItem, FoodItemDocument } from '../schema/food-item.schema';
-import { Restaurant, RestaurantDocument } from '../schema/restaurant.schema';
 import { buildPublicFilePath } from '../common/config/multer.config';
 import { CreateFoodItemDto } from './dto/create-food-item.dto';
 import { UpdateFoodItemDto } from './dto/update-food-item.dto';
 
 @Injectable()
 export class FoodItemsService {
+  private authServiceUrl: string;
+
   constructor(
     @InjectModel(FoodItem.name)
     private foodItemModel: Model<FoodItemDocument>,
-    @InjectModel(Restaurant.name)
-    private restaurantModel: Model<RestaurantDocument>,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.authServiceUrl = this.configService.get<string>('AUTH_SERVICE_URL') || 'http://localhost:5001';
+  }
+
+  // Helper method to verify restaurant exists in auth-service
+  private async verifyRestaurantExists(restaurantId: string): Promise<void> {
+    try {
+      await axios.get(
+        `${this.authServiceUrl}/api/auth/restaurant/profile/${restaurantId}`
+      );
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new NotFoundException('Restaurant not found');
+      }
+      throw new BadRequestException('Failed to verify restaurant from auth service');
+    }
+  }
+
   async create(
     restaurantId: string,
     dto: CreateFoodItemDto,
     file?: Express.Multer.File,
   ) {
-    const restaurant = await this.restaurantModel.findById(restaurantId);
-    if (!restaurant) {
-      throw new NotFoundException('Restaurant not found');
-    }
+    // Verify restaurant exists in auth-service
+    await this.verifyRestaurantExists(restaurantId);
 
 
     const imagePath = file ? buildPublicFilePath(file.filename) : undefined;

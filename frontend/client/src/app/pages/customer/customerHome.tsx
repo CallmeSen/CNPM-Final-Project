@@ -263,8 +263,8 @@ const CustomerHome = () => {
                 >
                   <img
                     src={
-                      restaurant.profilePicture
-                        ? buildRestaurantServiceUrl(restaurant.profilePicture)
+                      restaurant.profilePicture && restaurant.profilePicture.trim()
+                        ? `http://localhost:5001${restaurant.profilePicture}`
                         : FALLBACK_IMAGE
                     }
                     alt={restaurant.name}
