@@ -11,6 +11,7 @@ import { Restaurant, RestaurantDocument } from '../schema/restaurant.schema';
 import { buildPublicFilePath } from '../common/config/multer.config';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import * as FormData from 'form-data';
 
 export interface SanitizedRestaurant {
   id: string;
@@ -86,13 +87,14 @@ export class RestaurantsService {
 
   async getProfile(restaurantId: string): Promise<SanitizedRestaurant> {
     const restaurant = await this.fetchRestaurantFromAuthService(restaurantId);
+    
     return {
       id: restaurant.id,
       name: restaurant.name,
       ownerName: restaurant.ownerName,
       location: restaurant.location,
       contactNumber: restaurant.contactNumber,
-      profilePicture: restaurant.profilePicture,
+      profilePicture: restaurant.profilePicture || '',
       availability: restaurant.availability,
       admin: {
         email: restaurant.email,
@@ -104,9 +106,69 @@ export class RestaurantsService {
     restaurantId: string,
     dto: UpdateRestaurantDto,
     file?: Express.Multer.File,
+    authHeader?: string,
   ): Promise<{ message: string; restaurant: SanitizedRestaurant }> {
-    // TODO: Implement update API in auth-service
-    throw new BadRequestException('Update profile feature will be available soon. Please contact auth-service admin.');
+    try {
+      const formData = new FormData();
+      
+      // Add text fields
+      if (dto.name) formData.append('name', dto.name);
+      if (dto.ownerName) formData.append('ownerName', dto.ownerName);
+      if (dto.location) formData.append('location', dto.location);
+      if (dto.contactNumber) formData.append('contactNumber', dto.contactNumber);
+      
+      // Add file if provided
+      if (file) {
+        formData.append('profilePicture', file.buffer, {
+          filename: file.originalname,
+          contentType: file.mimetype,
+        });
+      }
+
+      const headers: any = {
+        ...formData.getHeaders(),
+      };
+
+      // Forward the authorization header if provided
+      if (authHeader) {
+        headers['authorization'] = authHeader;
+      }
+
+      const response = await axios.patch(
+        `${this.authServiceUrl}/api/auth/restaurant/profile/${restaurantId}`,
+        formData,
+        { headers },
+      );
+
+      const restaurant = response.data.data.restaurant;
+      
+      return {
+        message: response.data.message,
+        restaurant: {
+          id: restaurant.id,
+          name: restaurant.name,
+          ownerName: restaurant.ownerName,
+          location: restaurant.location,
+          contactNumber: restaurant.contactNumber,
+          profilePicture: restaurant.profilePicture,
+          availability: restaurant.availability,
+          admin: { email: '' },
+        },
+      };
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new NotFoundException('Restaurant not found');
+      }
+      // Log the actual error for debugging
+      console.error('Error updating restaurant profile:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to update restaurant profile';
+      throw new BadRequestException(errorMessage);
+    }
   }
 
   async updateAvailability(
@@ -118,13 +180,47 @@ export class RestaurantsService {
   }
 
   async getPublicRestaurants(): Promise<SanitizedRestaurant[]> {
-    // TODO: Implement list API in auth-service for public restaurants
-    throw new BadRequestException('Public restaurants list will be available soon.');
+    try {
+      const response = await axios.get(
+        `${this.authServiceUrl}/api/auth/restaurants/available`
+      );
+      const restaurants = response.data.data.restaurants;
+      
+      return restaurants.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        ownerName: r.ownerName,
+        location: r.location,
+        contactNumber: r.contactNumber,
+        profilePicture: r.profilePicture,
+        availability: r.availability,
+        admin: { email: '' },
+      }));
+    } catch (error) {
+      throw new BadRequestException('Failed to fetch available restaurants from auth service');
+    }
   }
 
   async getAllRestaurants(): Promise<SanitizedRestaurant[]> {
-    // TODO: Implement list API in auth-service for all restaurants
-    throw new BadRequestException('All restaurants list will be available soon.');
+    try {
+      const response = await axios.get(
+        `${this.authServiceUrl}/api/auth/restaurants`
+      );
+      const restaurants = response.data.data.restaurants;
+      
+      return restaurants.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        ownerName: r.ownerName,
+        location: r.location,
+        contactNumber: r.contactNumber,
+        profilePicture: r.profilePicture,
+        availability: r.availability,
+        admin: { email: '' },
+      }));
+    } catch (error) {
+      throw new BadRequestException('Failed to fetch all restaurants from auth service');
+    }
   }
 
   async getRestaurantById(id: string): Promise<SanitizedRestaurant> {

@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Patch,
   Post,
   Request,
@@ -11,6 +12,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -50,7 +52,15 @@ const multerConfig = {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  private authServiceUrl: string;
+
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {
+    const port = this.configService.get<number>('AUTH_PORT') || 5001;
+    this.authServiceUrl = `http://localhost:${port}`;
+  }
 
   @Post('register/customer')
   async registerCustomer(@Body() dto: CustomerRegisterDto) {
@@ -106,7 +116,7 @@ export class AuthController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     const profilePicture = file
-      ? `http://localhost:5001/uploads/${file.filename}`
+      ? `/uploads/${file.filename}`
       : '';
     const result = await this.authService.registerRestaurant(
       dto,
@@ -177,6 +187,91 @@ export class AuthController {
     return {
       status: 'success',
       data: { superAdmin },
+    };
+  }
+
+  // Get all restaurants (public endpoint for customers)
+  @Get('restaurants')
+  async getAllRestaurants() {
+    const restaurants = await this.authService.getAllRestaurants();
+    return {
+      status: 'success',
+      data: { restaurants },
+    };
+  }
+
+  // Get available restaurants only (for customer view)
+  @Get('restaurants/available')
+  async getAvailableRestaurants() {
+    const restaurants = await this.authService.getAvailableRestaurants();
+    return {
+      status: 'success',
+      data: { restaurants },
+    };
+  }
+
+  // Update restaurant profile (Restaurant owner only)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('restaurant')
+  @Patch('restaurant/profile/:id')
+  @UseInterceptors(FileInterceptor('profilePicture', multerConfig))
+  async updateRestaurantProfile(
+    @Param('id') restaurantId: string,
+    @Body() updateData: {
+      name?: string;
+      ownerName?: string;
+      location?: string;
+      contactNumber?: string;
+    },
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const profilePictureUrl = file
+      ? `/uploads/${file.filename}`
+      : undefined;
+
+    const result = await this.authService.updateRestaurantProfile(
+      restaurantId,
+      updateData,
+      profilePictureUrl,
+    );
+
+    return {
+      status: 'success',
+      message: result.message,
+      data: { restaurant: result.restaurant },
+    };
+  }
+
+  // Update restaurant availability (SuperAdmin only)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('superAdmin')
+  @Patch('restaurants/:id/availability')
+  async updateRestaurantAvailability(
+    @Request() req: any,
+    @Body() body: { availability: boolean },
+  ) {
+    const restaurantId = req.params.id;
+    const result = await this.authService.updateRestaurantAvailability(
+      restaurantId,
+      body.availability,
+    );
+    return {
+      status: 'success',
+      message: result.message,
+      data: { restaurant: result.restaurant },
+    };
+  }
+
+  // Delete restaurant (SuperAdmin only)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('superAdmin')
+  @Post('restaurants/:id/delete')
+  async deleteRestaurant(@Request() req: any) {
+    const restaurantId = req.params.id;
+    const result = await this.authService.deleteRestaurant(restaurantId);
+    return {
+      status: 'success',
+      message: result.message,
     };
   }
 }

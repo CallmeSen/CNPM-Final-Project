@@ -384,4 +384,137 @@ export class AuthService {
       role: superAdmin.role,
     };
   }
+
+  // Get all restaurants (for public listing)
+  async getAllRestaurants(): Promise<{
+    id: string;
+    name: string;
+    ownerName: string;
+    location: string;
+    contactNumber: string;
+    profilePicture: string;
+    availability: boolean;
+  }[]> {
+    const restaurants = await this.restaurantModel.find();
+    
+    return restaurants.map(restaurant => ({
+      id: restaurant._id.toString(),
+      name: restaurant.name,
+      ownerName: restaurant.ownerName,
+      location: restaurant.location,
+      contactNumber: restaurant.contactNumber,
+      profilePicture: restaurant.profilePicture,
+      availability: restaurant.availability,
+    }));
+  }
+
+  // Get available restaurants only (for customer view)
+  async getAvailableRestaurants(): Promise<{
+    id: string;
+    name: string;
+    ownerName: string;
+    location: string;
+    contactNumber: string;
+    profilePicture: string;
+    availability: boolean;
+  }[]> {
+    const restaurants = await this.restaurantModel.find({ availability: true });
+    
+    return restaurants.map(restaurant => ({
+      id: restaurant._id.toString(),
+      name: restaurant.name,
+      ownerName: restaurant.ownerName,
+      location: restaurant.location,
+      contactNumber: restaurant.contactNumber,
+      profilePicture: restaurant.profilePicture,
+      availability: restaurant.availability,
+    }));
+  }
+
+  // Update restaurant availability (for SuperAdmin)
+  async updateRestaurantAvailability(
+    restaurantId: string,
+    availability: boolean,
+  ): Promise<{ message: string; restaurant: any }> {
+    const restaurant = await this.restaurantModel.findById(restaurantId);
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    restaurant.availability = availability;
+    await restaurant.save();
+
+    return {
+      message: 'Restaurant availability updated successfully',
+      restaurant: {
+        id: restaurant._id.toString(),
+        name: restaurant.name,
+        availability: restaurant.availability,
+      },
+    };
+  }
+
+  // Update restaurant profile (for Restaurant owner)
+  async updateRestaurantProfile(
+    restaurantId: string,
+    updateData: {
+      name?: string;
+      ownerName?: string;
+      location?: string;
+      contactNumber?: string;
+    },
+    profilePicture?: string,
+  ): Promise<{
+    message: string;
+    restaurant: {
+      id: string;
+      name: string;
+      ownerName: string;
+      location: string;
+      contactNumber: string;
+      profilePicture: string;
+      availability: boolean;
+    };
+  }> {
+    const restaurant = await this.restaurantModel.findById(restaurantId);
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    // Update fields if provided
+    if (updateData.name) restaurant.name = updateData.name;
+    if (updateData.ownerName) restaurant.ownerName = updateData.ownerName;
+    if (updateData.location) restaurant.location = updateData.location;
+    if (updateData.contactNumber) restaurant.contactNumber = updateData.contactNumber;
+    if (profilePicture) restaurant.profilePicture = profilePicture;
+
+    await restaurant.save();
+
+    return {
+      message: 'Restaurant profile updated successfully',
+      restaurant: {
+        id: restaurant._id.toString(),
+        name: restaurant.name,
+        ownerName: restaurant.ownerName,
+        location: restaurant.location,
+        contactNumber: restaurant.contactNumber,
+        profilePicture: restaurant.profilePicture,
+        availability: restaurant.availability,
+      },
+    };
+  }
+
+  // Delete restaurant (for SuperAdmin)
+  async deleteRestaurant(restaurantId: string): Promise<{ message: string }> {
+    const restaurant = await this.restaurantModel.findById(restaurantId);
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    await this.restaurantModel.findByIdAndDelete(restaurantId);
+
+    return {
+      message: 'Restaurant deleted successfully',
+    };
+  }
 }

@@ -66,9 +66,13 @@ function RestaurantDashboard() {
       if (updatedProfile.profilePictureFile) {
         formData.append('profilePicture', updatedProfile.profilePictureFile);
       }
+
+      // Get restaurant ID from current restaurant data
+      const restaurantId = restaurant.id;
   
-      const res = await fetch('http://localhost:5002/api/restaurant/update', {
-        method: 'PUT',
+      // Call auth-service directly for file upload
+      const res = await fetch(`http://localhost:5001/api/auth/restaurant/profile/${restaurantId}`, {
+        method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -84,6 +88,7 @@ function RestaurantDashboard() {
         alert(data.message || 'Failed to update profile');
       }
     } catch (err) {
+      console.error('Error updating profile:', err);
       alert('Error updating profile');
     }
   };
@@ -178,10 +183,14 @@ function RestaurantDashboard() {
           ) : (
             <div className="profile-overview">
               <div>
-                {restaurant.profilePicture ? (
+                {restaurant.profilePicture && restaurant.profilePicture.trim() ? (
                   <img
-                    src={`http://localhost:5002${restaurant.profilePicture}`}
+                    src={`http://localhost:5001${restaurant.profilePicture}`}
                     alt={restaurant.name || 'Restaurant'}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                    }}
                   />
                 ) : (
                   <div className="avatar-fallback">

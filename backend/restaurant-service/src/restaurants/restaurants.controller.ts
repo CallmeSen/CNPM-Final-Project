@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Put,
   UploadedFile,
@@ -70,10 +71,11 @@ export class RestaurantsController {
   updateProfile(
     @GetUser() user: AuthenticatedUser,
     @Body() dto: UpdateRestaurantDto,
+    @Headers('authorization') authHeader: string,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     const restaurantId = this.ensureRestaurant(user);
-    return this.restaurantsService.updateProfile(restaurantId, dto, file);
+    return this.restaurantsService.updateProfile(restaurantId, dto, file, authHeader);
   }
 
   @Put('availability')

@@ -26,17 +26,17 @@ describe('SuperAdminLogin', () => {
   it('should render login form', () => {
     render(<SuperAdminLogin />)
     
-    expect(screen.getByText('Super Admin Login')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Email')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Password')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument()
+    expect(screen.getByText('Super Admin Portal')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Enter your email')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 
   it('should show validation errors for empty fields', async () => {
     const user = userEvent.setup()
     render(<SuperAdminLogin />)
     
-    const submitButton = screen.getByRole('button', { name: /login/i })
+    const submitButton = screen.getByRole('button', { name: /sign in/i })
     await user.click(submitButton)
 
     expect(await screen.findByText('Email is required')).toBeInTheDocument()
@@ -47,10 +47,10 @@ describe('SuperAdminLogin', () => {
     const user = userEvent.setup()
     render(<SuperAdminLogin />)
     
-    const emailInput = screen.getByPlaceholderText('Email')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
     await user.type(emailInput, 'invalid-email')
     
-    const submitButton = screen.getByRole('button', { name: /login/i })
+    const submitButton = screen.getByRole('button', { name: /sign in/i })
     await user.click(submitButton)
 
     expect(await screen.findByText('Invalid email format')).toBeInTheDocument()
@@ -60,10 +60,10 @@ describe('SuperAdminLogin', () => {
     const user = userEvent.setup()
     render(<SuperAdminLogin />)
     
-    const passwordInput = screen.getByPlaceholderText('Password')
+    const passwordInput = screen.getByPlaceholderText('Enter your password')
     await user.type(passwordInput, '123')
     
-    const submitButton = screen.getByRole('button', { name: /login/i })
+    const submitButton = screen.getByRole('button', { name: /sign in/i })
     await user.click(submitButton)
 
     expect(await screen.findByText('Password must be at least 6 characters')).toBeInTheDocument()
@@ -78,20 +78,26 @@ describe('SuperAdminLogin', () => {
 
     render(<SuperAdminLogin />)
     
-    const emailInput = screen.getByPlaceholderText('Email')
-    const passwordInput = screen.getByPlaceholderText('Password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Enter your password')
     
     await user.type(emailInput, 'admin@test.com')
     await user.type(passwordInput, 'password123')
     
-    const submitButton = screen.getByRole('button', { name: /login/i })
+    const submitButton = screen.getByRole('button', { name: /sign in/i })
     await user.click(submitButton)
 
+    // Wait for success message
+    await waitFor(() => {
+      expect(screen.getByText('✅ Login Successful!')).toBeInTheDocument()
+    })
+
+    // Wait for localStorage and navigation (component has 1500ms timeout)
     await waitFor(() => {
       expect(localStorage.setItem).toHaveBeenCalledWith('token', 'fake-token')
       expect(localStorage.setItem).toHaveBeenCalledWith('superAdminName', 'Admin User')
       expect(mockPush).toHaveBeenCalledWith('/dashboard')
-    })
+    }, { timeout: 2000 })
   })
 
   it('should handle login failure', async () => {
@@ -103,13 +109,13 @@ describe('SuperAdminLogin', () => {
 
     render(<SuperAdminLogin />)
     
-    const emailInput = screen.getByPlaceholderText('Email')
-    const passwordInput = screen.getByPlaceholderText('Password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Enter your password')
     
     await user.type(emailInput, 'admin@test.com')
     await user.type(passwordInput, 'wrongpassword')
     
-    const submitButton = screen.getByRole('button', { name: /login/i })
+    const submitButton = screen.getByRole('button', { name: /sign in/i })
     await user.click(submitButton)
 
     expect(await screen.findByText('Invalid credentials')).toBeInTheDocument()
@@ -121,13 +127,13 @@ describe('SuperAdminLogin', () => {
 
     render(<SuperAdminLogin />)
     
-    const emailInput = screen.getByPlaceholderText('Email')
-    const passwordInput = screen.getByPlaceholderText('Password')
+    const emailInput = screen.getByPlaceholderText('Enter your email')
+    const passwordInput = screen.getByPlaceholderText('Enter your password')
     
     await user.type(emailInput, 'admin@test.com')
     await user.type(passwordInput, 'password123')
     
-    const submitButton = screen.getByRole('button', { name: /login/i })
+    const submitButton = screen.getByRole('button', { name: /sign in/i })
     await user.click(submitButton)
 
     expect(await screen.findByText('❌ Error during login')).toBeInTheDocument()
@@ -137,7 +143,7 @@ describe('SuperAdminLogin', () => {
     const user = userEvent.setup()
     render(<SuperAdminLogin />)
     
-    const registerLink = screen.getByText('Register here')
+    const registerLink = screen.getByRole('button', { name: /create account/i })
     await user.click(registerLink)
 
     expect(mockPush).toHaveBeenCalledWith('/register')

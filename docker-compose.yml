@@ -1,19 +1,97 @@
 services:
   # ==================== Database ====================
   
-  # MongoDB
+  # MongoDB for Auth Service
   mongodb:
-    container_name: mongodb-cnpm
+    container_name: mongodb-auth
     environment:
       MONGODB_INITDB_ROOT_USERNAME: admin
       MONGODB_INITDB_ROOT_PASSWORD: admin123
+      MONGODB_INITDB_DATABASE: Auth
     command: ["mongod", "--bind_ip_all"]
     image: mongodb/mongodb-community-server:latest
     volumes:
-      - mongodata:/data/db
-      - mongoconfig:/data/configdb
+      - mongodata-auth:/data/db
+      - mongoconfig-auth:/data/configdb
+      - ./infra/mongodb/init-scripts/init-auth.js:/docker-entrypoint-initdb.d/init-auth.js:ro
+    ports:
+      - "28016:27017"
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # MongoDB for Restaurant Service
+  mongodb2:
+    container_name: mongodb-restaurant
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: admin
+      MONGODB_INITDB_ROOT_PASSWORD: admin123
+      MONGODB_INITDB_DATABASE: Restaurant
+    command: ["mongod", "--bind_ip_all"]
+    image: mongodb/mongodb-community-server:latest
+    volumes:
+      - mongodata-restaurant:/data/db
+      - mongoconfig-restaurant:/data/configdb
+      - ./infra/mongodb/init-scripts/init-restaurant.js:/docker-entrypoint-initdb.d/init-restaurant.js:ro
     ports:
       - "28017:27017"
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # MongoDB for Order Service
+  mongodb3:
+    container_name: mongodb-order
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: admin
+      MONGODB_INITDB_ROOT_PASSWORD: admin123
+      MONGODB_INITDB_DATABASE: Order
+    command: ["mongod", "--bind_ip_all"]
+    image: mongodb/mongodb-community-server:latest
+    volumes:
+      - mongodata-order:/data/db
+      - mongoconfig-order:/data/configdb
+      - ./infra/mongodb/init-scripts/init-order.js:/docker-entrypoint-initdb.d/init-order.js:ro
+    ports:
+      - "28018:27017"
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  # MongoDB for Payment Service
+  mongodb4:
+    container_name: mongodb-payment
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: admin
+      MONGODB_INITDB_ROOT_PASSWORD: admin123
+      MONGODB_INITDB_DATABASE: Payment
+    command: ["mongod", "--bind_ip_all"]
+    image: mongodb/mongodb-community-server:latest
+    volumes:
+      - mongodata-payment:/data/db
+      - mongoconfig-payment:/data/configdb
+      - ./infra/mongodb/init-scripts/init-payment.js:/docker-entrypoint-initdb.d/init-payment.js:ro
+    ports:
+      - "28019:27017"
     networks:
       - cnpm-network
     restart: unless-stopped
@@ -66,7 +144,7 @@ services:
       - cnpm-network
     restart: unless-stopped
     depends_on:
-      mongodb:
+      mongodb3:
         condition: service_healthy
       auth-service:
         condition: service_started
@@ -93,7 +171,7 @@ services:
       - cnpm-network
     restart: unless-stopped
     depends_on:
-      mongodb:
+      mongodb2:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:5002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
@@ -116,7 +194,7 @@ services:
       - cnpm-network
     restart: unless-stopped
     depends_on:
-      mongodb:
+      mongodb4:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:5004/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
@@ -252,13 +330,21 @@ networks:
 
 # Volumes
 volumes:
-  mongodata:
+  mongodata-auth:
     driver: local
-  mongoconfig:
+  mongoconfig-auth:
     driver: local
-  mongodb-data:
+  mongodata-restaurant:
     driver: local
-  mongodb-config:
+  mongoconfig-restaurant:
+    driver: local
+  mongodata-order:
+    driver: local
+  mongoconfig-order:
+    driver: local
+  mongodata-payment:
+    driver: local
+  mongoconfig-payment:
     driver: local
   prometheus-data:
     driver: local

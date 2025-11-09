@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client-frontend
+  namespace: cnpm-food-delivery
+  labels:
+    app: client-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: client-frontend
+  template:
+    metadata:
+      labels:
+        app: client-frontend
+    spec:
+      containers:
+        - name: client-frontend
+          image: client-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: PORT
+              value: "3000"
+            - name: NEXT_PUBLIC_API_URL
+              value: "http://nginx-gateway"
+            - name: NEXT_PUBLIC_AUTH_SERVICE_URL
+              value: "http://auth-service:5001"
+            - name: NEXT_PUBLIC_RESTAURANT_SERVICE_URL
+              value: "http://restaurant-service:5002"
+            - name: NEXT_PUBLIC_ORDER_SERVICE_URL
+              value: "http://order-service:5005"
+            - name: NEXT_PUBLIC_PAYMENT_SERVICE_URL
+              value: "http://payment-service:5004"
+            - name: NEXT_PUBLIC_DELIVERY_SERVICE_URL
+              value: "http://delivery-service:5003"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
