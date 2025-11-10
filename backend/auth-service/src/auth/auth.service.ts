@@ -9,9 +9,15 @@ import { InjectModel } from '@nestjs/mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import { Customer, CustomerDocument } from '../schemas/customer.schema';
+import { Restaurant, RestaurantDocument } from '../schemas/restaurant.schema';
+import { SuperAdmin, SuperAdminDocument } from '../schemas/super-admin.schema';
 import { CustomerRegisterDto } from './dto/customer-register.dto';
 import { CustomerLoginDto } from './dto/customer-login.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { RegisterRestaurantDto } from './dto/register-restaurant.dto';
+import { LoginRestaurantDto } from './dto/login-restaurant.dto';
+import { RegisterSuperAdminDto } from './dto/register-super-admin.dto';
+import { LoginSuperAdminDto } from './dto/login-super-admin.dto';
 
 interface CustomerAuthPayload {
   token: string;
@@ -30,6 +36,10 @@ export class AuthService {
   constructor(
     @InjectModel(Customer.name)
     private readonly customerModel: Model<CustomerDocument>,
+    @InjectModel(Restaurant.name)
+    private readonly restaurantModel: Model<RestaurantDocument>,
+    @InjectModel(SuperAdmin.name)
+    private readonly superAdminModel: Model<SuperAdminDocument>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -120,6 +130,391 @@ export class AuthService {
       email: customer.email,
       phone: customer.phone,
       location: customer.location,
+    };
+  }
+
+  // Restaurant authentication methods
+  async registerRestaurant(
+    dto: RegisterRestaurantDto,
+    profilePicture?: string,
+  ): Promise<{
+    message: string;
+    token: string;
+    restaurant: {
+      id: string;
+      name: string;
+      ownerName: string;
+      location: string;
+      contactNumber: string;
+      profilePicture: string;
+      email: string;
+    };
+  }> {
+    const existing = await this.restaurantModel.findOne({
+      $or: [{ name: dto.name }, { 'admin.email': dto.email }],
+    });
+
+    if (existing) {
+      throw new ConflictException('Restaurant or email already exists');
+    }
+
+    const restaurant = await this.restaurantModel.create({
+      name: dto.name,
+      ownerName: dto.ownerName,
+      location: dto.location,
+      contactNumber: dto.contactNumber,
+      profilePicture: profilePicture || '',
+      admin: {
+        email: dto.email,
+        password: dto.password,
+      },
+    });
+
+    const payload = {
+      sub: restaurant._id.toString(),
+      restaurantId: restaurant._id.toString(),
+      role: 'restaurant',
+      email: restaurant.admin.email,
+    };
+
+    const token = this.jwtService.sign(payload);
+
+    return {
+      message: 'Restaurant registered successfully',
+      token,
+      restaurant: {
+        id: restaurant._id.toString(),
+        name: restaurant.name,
+        ownerName: restaurant.ownerName,
+        location: restaurant.location,
+        contactNumber: restaurant.contactNumber,
+        profilePicture: restaurant.profilePicture,
+        email: restaurant.admin.email,
+      },
+    };
+  }
+
+  async loginRestaurant(dto: LoginRestaurantDto): Promise<{
+    message: string;
+    token: string;
+    restaurant: {
+      id: string;
+      name: string;
+      ownerName: string;
+      location: string;
+      contactNumber: string;
+      profilePicture: string;
+      email: string;
+    };
+  }> {
+    const restaurant = await this.restaurantModel.findOne({
+      'admin.email': dto.email,
+    });
+
+    if (!restaurant) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const isPasswordValid = await restaurant.compareAdminPassword(dto.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const payload = {
+      sub: restaurant._id.toString(),
+      restaurantId: restaurant._id.toString(),
+      role: 'restaurant',
+      email: restaurant.admin.email,
+    };
+
+    const token = this.jwtService.sign(payload);
+
+    return {
+      message: 'Login successful',
+      token,
+      restaurant: {
+        id: restaurant._id.toString(),
+        name: restaurant.name,
+        ownerName: restaurant.ownerName,
+        location: restaurant.location,
+        contactNumber: restaurant.contactNumber,
+        profilePicture: restaurant.profilePicture,
+        email: restaurant.admin.email,
+      },
+    };
+  }
+
+  // SuperAdmin authentication methods
+  async registerSuperAdmin(dto: RegisterSuperAdminDto): Promise<{
+    message: string;
+    token: string;
+    superAdmin: {
+      id: string;
+      username: string;
+      email: string;
+      role: string;
+    };
+  }> {
+    const existing = await this.superAdminModel.findOne({
+      $or: [{ username: dto.username }, { email: dto.email }],
+    });
+
+    if (existing) {
+      throw new ConflictException('Username or email already exists');
+    }
+
+    const superAdmin = await this.superAdminModel.create({
+      username: dto.username,
+      email: dto.email,
+      password: dto.password,
+    });
+
+    const payload = {
+      sub: superAdmin._id.toString(),
+      role: 'superAdmin',
+      email: superAdmin.email,
+    };
+
+    const token = this.jwtService.sign(payload);
+
+    return {
+      message: 'Super Admin registered successfully',
+      token,
+      superAdmin: {
+        id: superAdmin._id.toString(),
+        username: superAdmin.username,
+        email: superAdmin.email,
+        role: superAdmin.role,
+      },
+    };
+  }
+
+  async loginSuperAdmin(dto: LoginSuperAdminDto): Promise<{
+    message: string;
+    token: string;
+    superAdmin: {
+      id: string;
+      username: string;
+      email: string;
+      role: string;
+    };
+  }> {
+    const lookupFilter = dto.username
+      ? { username: dto.username }
+      : { email: dto.email };
+
+    const superAdmin = await this.superAdminModel.findOne(lookupFilter);
+
+    if (!superAdmin) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const isPasswordValid = await (superAdmin as any).comparePassword(
+      dto.password,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const payload = {
+      sub: superAdmin._id.toString(),
+      role: 'superAdmin',
+      email: superAdmin.email,
+    };
+
+    const token = this.jwtService.sign(payload);
+
+    return {
+      message: 'Login successful',
+      token,
+      superAdmin: {
+        id: superAdmin._id.toString(),
+        username: superAdmin.username,
+        email: superAdmin.email,
+        role: superAdmin.role,
+      },
+    };
+  }
+
+  // Get restaurant profile by ID
+  async getRestaurantProfile(restaurantId: string): Promise<{
+    id: string;
+    name: string;
+    ownerName: string;
+    location: string;
+    contactNumber: string;
+    profilePicture: string;
+    email: string;
+    availability: boolean;
+  }> {
+    const restaurant = await this.restaurantModel.findById(restaurantId);
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    return {
+      id: restaurant._id.toString(),
+      name: restaurant.name,
+      ownerName: restaurant.ownerName,
+      location: restaurant.location,
+      contactNumber: restaurant.contactNumber,
+      profilePicture: restaurant.profilePicture,
+      email: restaurant.admin.email,
+      availability: restaurant.availability,
+    };
+  }
+
+  // Get superadmin profile by ID
+  async getSuperAdminProfile(superAdminId: string): Promise<{
+    id: string;
+    username: string;
+    email: string;
+    role: string;
+  }> {
+    const superAdmin = await this.superAdminModel.findById(superAdminId);
+    if (!superAdmin) {
+      throw new NotFoundException('SuperAdmin not found');
+    }
+
+    return {
+      id: superAdmin._id.toString(),
+      username: superAdmin.username,
+      email: superAdmin.email,
+      role: superAdmin.role,
+    };
+  }
+
+  // Get all restaurants (for public listing)
+  async getAllRestaurants(): Promise<{
+    id: string;
+    name: string;
+    ownerName: string;
+    location: string;
+    contactNumber: string;
+    profilePicture: string;
+    availability: boolean;
+  }[]> {
+    const restaurants = await this.restaurantModel.find();
+    
+    return restaurants.map(restaurant => ({
+      id: restaurant._id.toString(),
+      name: restaurant.name,
+      ownerName: restaurant.ownerName,
+      location: restaurant.location,
+      contactNumber: restaurant.contactNumber,
+      profilePicture: restaurant.profilePicture,
+      availability: restaurant.availability,
+    }));
+  }
+
+  // Get available restaurants only (for customer view)
+  async getAvailableRestaurants(): Promise<{
+    id: string;
+    name: string;
+    ownerName: string;
+    location: string;
+    contactNumber: string;
+    profilePicture: string;
+    availability: boolean;
+  }[]> {
+    const restaurants = await this.restaurantModel.find({ availability: true });
+    
+    return restaurants.map(restaurant => ({
+      id: restaurant._id.toString(),
+      name: restaurant.name,
+      ownerName: restaurant.ownerName,
+      location: restaurant.location,
+      contactNumber: restaurant.contactNumber,
+      profilePicture: restaurant.profilePicture,
+      availability: restaurant.availability,
+    }));
+  }
+
+  // Update restaurant availability (for SuperAdmin)
+  async updateRestaurantAvailability(
+    restaurantId: string,
+    availability: boolean,
+  ): Promise<{ message: string; restaurant: any }> {
+    const restaurant = await this.restaurantModel.findById(restaurantId);
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    restaurant.availability = availability;
+    await restaurant.save();
+
+    return {
+      message: 'Restaurant availability updated successfully',
+      restaurant: {
+        id: restaurant._id.toString(),
+        name: restaurant.name,
+        availability: restaurant.availability,
+      },
+    };
+  }
+
+  // Update restaurant profile (for Restaurant owner)
+  async updateRestaurantProfile(
+    restaurantId: string,
+    updateData: {
+      name?: string;
+      ownerName?: string;
+      location?: string;
+      contactNumber?: string;
+    },
+    profilePicture?: string,
+  ): Promise<{
+    message: string;
+    restaurant: {
+      id: string;
+      name: string;
+      ownerName: string;
+      location: string;
+      contactNumber: string;
+      profilePicture: string;
+      availability: boolean;
+    };
+  }> {
+    const restaurant = await this.restaurantModel.findById(restaurantId);
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    // Update fields if provided
+    if (updateData.name) restaurant.name = updateData.name;
+    if (updateData.ownerName) restaurant.ownerName = updateData.ownerName;
+    if (updateData.location) restaurant.location = updateData.location;
+    if (updateData.contactNumber) restaurant.contactNumber = updateData.contactNumber;
+    if (profilePicture) restaurant.profilePicture = profilePicture;
+
+    await restaurant.save();
+
+    return {
+      message: 'Restaurant profile updated successfully',
+      restaurant: {
+        id: restaurant._id.toString(),
+        name: restaurant.name,
+        ownerName: restaurant.ownerName,
+        location: restaurant.location,
+        contactNumber: restaurant.contactNumber,
+        profilePicture: restaurant.profilePicture,
+        availability: restaurant.availability,
+      },
+    };
+  }
+
+  // Delete restaurant (for SuperAdmin)
+  async deleteRestaurant(restaurantId: string): Promise<{ message: string }> {
+    const restaurant = await this.restaurantModel.findById(restaurantId);
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    await this.restaurantModel.findByIdAndDelete(restaurantId);
+
+    return {
+      message: 'Restaurant deleted successfully',
     };
   }
 }
