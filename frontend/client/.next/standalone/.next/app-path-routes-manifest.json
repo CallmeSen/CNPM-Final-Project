@@ -1,0 +1,22 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/about/page": "/about",
+  "/auth/login/page": "/auth/login",
+  "/auth/register/page": "/auth/register",
+  "/checkout/page": "/checkout",
+  "/contact/page": "/contact",
+  "/customer/cart/page": "/customer/cart",
+  "/customer/order-details/[id]/page": "/customer/order-details/[id]",
+  "/customer/order-history/page": "/customer/order-history",
+  "/customer/profile/page": "/customer/profile",
+  "/customer/restaurant/[restaurantId]/foods/page": "/customer/restaurant/[restaurantId]/foods",
+  "/favicon.ico/route": "/favicon.ico",
+  "/orders/create-from-cart/page": "/orders/create-from-cart",
+  "/orders/delete/[id]/page": "/orders/delete/[id]",
+  "/orders/details/[id]/page": "/orders/details/[id]",
+  "/orders/edit/[id]/page": "/orders/edit/[id]",
+  "/orders/new/page": "/orders/new",
+  "/orders/page": "/orders",
+  "/page": "/",
+  "/privacy/page": "/privacy"
+}

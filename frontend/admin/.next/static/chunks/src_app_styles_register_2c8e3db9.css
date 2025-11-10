@@ -1,0 +1,56 @@
+/* [project]/src/app/styles/register.css [app-client] (css) */
+.register-container {
+  background: #f4f4f4;
+  border-radius: 10px;
+  width: 400px;
+  margin: 80px auto;
+  padding: 30px;
+  font-family: sans-serif;
+  box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+}
+
+.register-container h2 {
+  text-align: center;
+  color: #333;
+}
+
+.register-container form {
+  flex-direction: column;
+  display: flex;
+}
+
+.register-container input {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin: 10px 0;
+  padding: 10px;
+}
+
+.register-container button {
+  color: #fff;
+  cursor: pointer;
+  background: #3a86ff;
+  border: none;
+  border-radius: 5px;
+  padding: 12px;
+  font-weight: bold;
+}
+
+.register-container button:hover {
+  background: #265fbb;
+}
+
+.message {
+  text-align: center;
+  color: green;
+  margin-top: 15px;
+}
+
+.error {
+  color: red;
+  margin-top: -10px;
+  margin-bottom: 10px;
+  font-size: .85rem;
+}
+
+/*# sourceMappingURL=src_app_styles_register_2c8e3db9.css.map*/
