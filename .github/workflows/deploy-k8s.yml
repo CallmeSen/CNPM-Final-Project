@@ -253,7 +253,7 @@ jobs:
           echo "Monitoring stack deployed!"
         continue-on-error: true
 
-      # 6️⃣ Verify deployment
+      # 6️⃣ Verify deployment !
       - name: Verify Deployment
         run: |
           echo "=== All Pods (App + Monitoring) ==="
