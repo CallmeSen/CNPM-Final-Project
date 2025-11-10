@@ -40,6 +40,11 @@
         "source": "/api/payment/:path*",
         "destination": "http://localhost:5004/api/payment/:path*",
         "regex": "^/api/payment(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/uploads/:path*",
+        "destination": "http://localhost:5002/uploads/:path*",
+        "regex": "^/uploads(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
       }
     ],
     "fallback": []
