@@ -20,16 +20,20 @@ jobs:
       - name: Clean temp directory
         shell: pwsh
         run: |
+          # Clean temp folder
           if (Test-Path "$env:RUNNER_TEMP") {
-            Get-ChildItem -Path "$env:RUNNER_TEMP" -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            Get-ChildItem -Path "$env:RUNNER_TEMP" -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
           }
+          # Also clean old work directories
+          $workDir = "E:\GitHub\actions-runner\_work\_temp"
+          if (Test-Path $workDir) {
+            Get-ChildItem -Path $workDir -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          }
+          echo "✓ Temp cleanup completed"
         continue-on-error: true
 
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          clean: false
-          persist-credentials: false
+        uses: actions/checkout@v3
 
       - name: Build Backend Services
         run: |
@@ -57,10 +61,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          clean: false
-          persist-credentials: false
+        uses: actions/checkout@v3
         
       - name: Set up Kubeconfig
         uses: azure/k8s-set-context@v3
