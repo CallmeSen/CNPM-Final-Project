@@ -43,6 +43,12 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
 # Copy built application from builder
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
+# Create uploads directory with proper permissions
+RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
+
+# Create a .gitkeep file to ensure uploads directory is not empty
+RUN touch /app/uploads/.gitkeep && chown nestjs:nodejs /app/uploads/.gitkeep
+
 # Switch to non-root user
 USER nestjs
 

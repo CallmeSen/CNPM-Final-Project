@@ -9,6 +9,8 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { Customer } from '../schemas/customer.schema';
+import { Restaurant } from '../schemas/restaurant.schema';
+import { SuperAdmin } from '../schemas/super-admin.schema';
 
 type CustomerModelMock = jest.Mock & {
   findOne: jest.Mock;
@@ -44,6 +46,8 @@ const createCustomerDoc = (
 describe('AuthService', () => {
   let service: AuthService;
   let customerModelMock: CustomerModelMock;
+  let restaurantModelMock: any;
+  let superAdminModelMock: any;
   let jwtServiceMock: { sign: jest.Mock };
 
   beforeEach(async () => {
@@ -52,6 +56,18 @@ describe('AuthService', () => {
       findById: jest.fn(),
       findByIdAndUpdate: jest.fn(),
     });
+
+    restaurantModelMock = {
+      findOne: jest.fn(),
+      findById: jest.fn(),
+      create: jest.fn(),
+    };
+
+    superAdminModelMock = {
+      findOne: jest.fn(),
+      findById: jest.fn(),
+      create: jest.fn(),
+    };
 
     jwtServiceMock = {
       sign: jest.fn().mockReturnValue('signed-token'),
@@ -62,6 +78,8 @@ describe('AuthService', () => {
         AuthService,
         { provide: JwtService, useValue: jwtServiceMock },
         { provide: getModelToken(Customer.name), useValue: customerModelMock },
+        { provide: getModelToken(Restaurant.name), useValue: restaurantModelMock },
+        { provide: getModelToken(SuperAdmin.name), useValue: superAdminModelMock },
       ],
     }).compile();
 
