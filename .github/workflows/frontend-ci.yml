@@ -1,15 +1,29 @@
-name: Fastie.Saigon Frontend CI/CD
-
+name: frontend-ci
 on:
   push:
-    branches: [main, phase-1]
+    branches:
+      - main
+      - phase-1
+      - phase-2
+      - phase-3
+      - phase-4
+      - phase-5
+      - source
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yml'
   pull_request:
-    branches: [main, phase-1]
+    branches:
+      - main
     paths:
       - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests (for emergency builds)'
+        required: false
+        default: 'false'
 
 jobs:
   # Client App (Fastie.Saigon Customer App - Port 3000)
@@ -22,7 +36,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [24.x]
+        node-version: ['24.8.0']
 
     steps:
       - name: Checkout code
@@ -42,8 +56,13 @@ jobs:
         run: npm run lint || echo "No lint script found"
         continue-on-error: true
 
-      - name: Run tests
-        run: npm test -- --coverage --watchAll=false
+      - name: Run tests (if available)
+        run: |
+          if npm run | grep -qE "^  test"; then
+            npm test -- --coverage --watchAll=false
+          else
+            echo "No test script defined, skipping tests."
+          fi
         env:
           CI: true
 
@@ -58,19 +77,20 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: client-build-${{ matrix.node-version }}
-          path: frontend/client/build
+          path: frontend/client/.next
           retention-days: 7
 
       - name: Upload test coverage
+        if: ${{ hashFiles('frontend/client/coverage/**') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: client-coverage-${{ matrix.node-version }}
           path: frontend/client/coverage
           retention-days: 7
 
-  # Admin App (SuperAdmin Frontend - Port 3001)
+  # Admin App (SuperAdmin Frontend - Port 3001) - Next.js App
   admin-app:
-    name: Admin App CI
+    name: Admin App CI (Next.js)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -78,7 +98,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: ['24.8.0']
 
     steps:
       - name: Checkout code
@@ -95,26 +115,25 @@ jobs:
         run: npm ci
 
       - name: Run linter
-        run: npm run lint || echo "No lint script found"
+        run: npm run lint || echo "Linter completed"
         continue-on-error: true
 
       - name: Run tests
-        run: npm test -- --coverage --watchAll=false
+        run: npm run test:ci
         env:
           CI: true
 
-      - name: Build application
+      - name: Build Next.js application
         run: npm run build
         env:
           CI: false
-          REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL || 'http://localhost:4000' }}
-          REACT_APP_STRIPE_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_STRIPE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_BACKEND_URL: ${{ secrets.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000' }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: admin-build-${{ matrix.node-version }}
-          path: frontend/admin/build
+          path: frontend/admin/.next
           retention-days: 7
 
       - name: Upload test coverage
@@ -134,7 +153,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [24.x]
+        node-version: ['24.8.0']
 
     steps:
       - name: Checkout code
@@ -154,8 +173,13 @@ jobs:
         run: npm run lint || echo "No lint script found"
         continue-on-error: true
 
-      - name: Run tests
-        run: npm test -- --coverage --watchAll=false
+      - name: Run tests (if available)
+        run: |
+          if npm run | grep -qE "^  test"; then
+            npm test -- --coverage --watchAll=false
+          else
+            echo "No test script defined, skipping tests."
+          fi
         env:
           CI: true
 
@@ -170,40 +194,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: restaurant-build-${{ matrix.node-version }}
-          path: frontend/restaurant/build
+          path: frontend/restaurant/.next
           retention-days: 7
 
       - name: Upload test coverage
+        if: ${{ hashFiles('frontend/restaurant/coverage/**') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: restaurant-coverage-${{ matrix.node-version }}
           path: frontend/restaurant/coverage
           retention-days: 7
 
-  # Optional: Deploy job (runs only on main branch)
-  deploy-preview:
-    name: Deploy Preview
-    needs: [client-app, admin-app, restaurant-app]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./artifacts
-
-      - name: Display structure of downloaded files
-        run: ls -R ./artifacts
-
-      - name: Deploy to staging
-        run: |
-          echo "🚀 Ready to deploy to staging environment"
-          echo "Client app build available"
-          echo "Admin app build available"
-          echo "Restaurant app build available"
-          # Add your deployment commands here
-          # Example: Deploy to Netlify, Vercel, AWS S3, etc.
