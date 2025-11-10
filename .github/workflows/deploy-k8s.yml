@@ -1,7 +1,6 @@
-name: Deploy to Kubernetes
+name: CI/CD Pipeline - Docker Desktop K8s
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
@@ -11,150 +10,185 @@ on:
       - 'frontend/**'
       - 'infra/k8s/**'
       - '.github/workflows/deploy-k8s.yml'
-
-env:
-  DOCKER_REGISTRY: docker.io
-  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  workflow_dispatch:  # Cho phép trigger manual
 
 jobs:
-  build-and-push-backend:
-    runs-on: self-hosted
-    strategy:
-      matrix:
-        service:
-          - auth-service
-          - restaurant-service
-          - order-service
-          - payment-service
-    
+  build-and-deploy:
+    runs-on: self-hosted  # Chạy trên máy local với Docker Desktop
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Clean temp directory
+        shell: powershell
+        run: |
+          if (Test-Path "$env:RUNNER_TEMP") {
+            Get-ChildItem -Path "$env:RUNNER_TEMP" -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          }
+          $workDir = "E:\GitHub\actions-runner\_work\_temp"
+          if (Test-Path $workDir) {
+            Get-ChildItem -Path $workDir -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          }
+          echo "✓ Temp cleanup completed"
+        continue-on-error: true
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Login to Docker Hub
+      # 1️⃣ Đăng nhập vào DockerHub
+      - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push ${{ matrix.service }}
+      # 2️⃣ Build & push Backend Services
+      - name: Build and Push Auth Service
         uses: docker/build-push-action@v5
         with:
-          context: ./backend/${{ matrix.service }}
-          file: ./backend/${{ matrix.service }}/Dockerfile
+          context: ./backend/auth-service
           push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:latest
-            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:buildcache,mode=max
+          tags: ${{ secrets.DOCKER_USERNAME }}/auth-service:latest
 
-  build-and-push-frontend:
-    runs-on: self-hosted
-    strategy:
-      matrix:
-        app:
-          - client
-          - admin
-          - restaurant
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push ${{ matrix.app }}-frontend
+      - name: Build and Push Restaurant Service
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend/${{ matrix.app }}
-          file: ./frontend/${{ matrix.app }}/Dockerfile
+          context: ./backend/restaurant-service
           push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app }}-frontend:latest
-            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.app }}-frontend:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.app }}-frontend:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ matrix.app }}-frontend:buildcache,mode=max
+          tags: ${{ secrets.DOCKER_USERNAME }}/restaurant-service:latest
 
-  deploy-to-k8s:
-    needs: 
-      - build-and-push-backend
-      - build-and-push-frontend
-    runs-on: self-hosted
+      - name: Build and Push Order Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend/order-service
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/order-service:latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        
-      - name: Set up Kubeconfig
-        shell: bash
+      - name: Build and Push Payment Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend/payment-service
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/payment-service:latest
+
+      # 2️⃣ Build & push Frontend Apps
+      - name: Build and Push Client Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend/client
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/client-frontend:latest
+
+      - name: Build and Push Admin Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend/admin
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/admin-frontend:latest
+
+      - name: Build and Push Restaurant Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend/restaurant
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/restaurant-frontend:latest
+
+      # 3️⃣ Verify Docker Desktop Kubernetes
+      - name: Check Kubernetes context
         run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
+          kubectl config current-context
+          kubectl cluster-info
+          kubectl get nodes
 
-      - name: Create namespace if not exists
+      # 4️⃣ Deploy to Docker Desktop Kubernetes
+      - name: Prepare Namespace and Base Resources
         run: |
-          kubectl get namespace cnpm-food-delivery || kubectl create namespace cnpm-food-delivery
-
-      - name: Apply Kubernetes manifests
-        run: |
+          # Create namespace if not exists
+          kubectl create namespace cnpm-food-delivery --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Apply base resources
           kubectl apply -f infra/k8s/namespace.yaml
           kubectl apply -f infra/k8s/secrets.yaml
           kubectl apply -f infra/k8s/pvcs.yaml
-          kubectl apply -f infra/k8s/
 
-      - name: Debug image tags
+      - name: Deploy MongoDB Services
         run: |
-          echo "=== Backend Services ==="
-          echo "Auth Service: ${{ secrets.DOCKER_USERNAME }}/auth-service:latest"
-          echo "Restaurant Service: ${{ secrets.DOCKER_USERNAME }}/restaurant-service:latest"
-          echo "Order Service: ${{ secrets.DOCKER_USERNAME }}/order-service:latest"
-          echo "Payment Service: ${{ secrets.DOCKER_USERNAME }}/payment-service:latest"
-          echo ""
-          echo "=== Frontend Apps ==="
-          echo "Client Frontend: ${{ secrets.DOCKER_USERNAME }}/client-frontend:latest"
-          echo "Admin Frontend: ${{ secrets.DOCKER_USERNAME }}/admin-frontend:latest"
-          echo "Restaurant Frontend: ${{ secrets.DOCKER_USERNAME }}/restaurant-frontend:latest"
+          # Clean up existing MongoDB if exists
+          kubectl delete -f infra/k8s/auth-service-mongo.yaml --ignore-not-found=true
+          kubectl delete -f infra/k8s/restaurant-service-mongo.yaml --ignore-not-found=true
+          kubectl delete -f infra/k8s/order-service-mongo.yaml --ignore-not-found=true
+          kubectl delete -f infra/k8s/payment-service-mongo.yaml --ignore-not-found=true
+          
+          Start-Sleep -Seconds 10
+          
+          # Deploy MongoDB instances
+          kubectl apply -f infra/k8s/auth-service-mongo.yaml
+          kubectl apply -f infra/k8s/restaurant-service-mongo.yaml
+          kubectl apply -f infra/k8s/order-service-mongo.yaml
+          kubectl apply -f infra/k8s/payment-service-mongo.yaml
+          
+          echo "Waiting for MongoDB instances to be ready..."
+          kubectl wait --for=condition=ready pod -l app=auth-mongo -n cnpm-food-delivery --timeout=300s; if (!$?) { echo "Auth MongoDB timeout" }
+          kubectl wait --for=condition=ready pod -l app=restaurant-mongo -n cnpm-food-delivery --timeout=300s; if (!$?) { echo "Restaurant MongoDB timeout" }
+          kubectl wait --for=condition=ready pod -l app=order-mongo -n cnpm-food-delivery --timeout=300s; if (!$?) { echo "Order MongoDB timeout" }
+          kubectl wait --for=condition=ready pod -l app=payment-mongo -n cnpm-food-delivery --timeout=300s; if (!$?) { echo "Payment MongoDB timeout" }
 
-      - name: Update Backend Deployments
+      - name: Deploy Backend Microservices
         run: |
-          kubectl set image deployment/auth-service auth-service=${{ secrets.DOCKER_USERNAME }}/auth-service:latest -n cnpm-food-delivery
-          kubectl set image deployment/restaurant-service restaurant-service=${{ secrets.DOCKER_USERNAME }}/restaurant-service:latest -n cnpm-food-delivery
-          kubectl set image deployment/order-service order-service=${{ secrets.DOCKER_USERNAME }}/order-service:latest -n cnpm-food-delivery
-          kubectl set image deployment/payment-service payment-service=${{ secrets.DOCKER_USERNAME }}/payment-service:latest -n cnpm-food-delivery
+          # Clean up existing services first
+          kubectl delete -f infra/k8s/auth-service-deployment.yaml --ignore-not-found=true
+          kubectl delete -f infra/k8s/restaurant-service-deployment.yaml --ignore-not-found=true
+          kubectl delete -f infra/k8s/order-service-deployment.yaml --ignore-not-found=true
+          kubectl delete -f infra/k8s/payment-service-deployment.yaml --ignore-not-found=true
+          
+          echo "Waiting for old services to be cleaned up..."
+          Start-Sleep -Seconds 10
 
-      - name: Update Frontend Deployments
+          # Deploy new backend services
+          kubectl apply -f infra/k8s/auth-service-deployment.yaml
+          kubectl apply -f infra/k8s/auth-service-service.yaml
+          kubectl apply -f infra/k8s/restaurant-service-deployment.yaml
+          kubectl apply -f infra/k8s/restaurant-service-service.yaml
+          kubectl apply -f infra/k8s/order-service-deployment.yaml
+          kubectl apply -f infra/k8s/order-service-service.yaml
+          kubectl apply -f infra/k8s/payment-service-deployment.yaml
+          kubectl apply -f infra/k8s/payment-service-service.yaml
+
+      - name: Deploy Frontend Apps
         run: |
-          kubectl set image deployment/client-frontend client-frontend=${{ secrets.DOCKER_USERNAME }}/client-frontend:latest -n cnpm-food-delivery
-          kubectl set image deployment/admin-frontend admin-frontend=${{ secrets.DOCKER_USERNAME }}/admin-frontend:latest -n cnpm-food-delivery
-          kubectl set image deployment/restaurant-frontend restaurant-frontend=${{ secrets.DOCKER_USERNAME }}/restaurant-frontend:latest -n cnpm-food-delivery
+          # Clean up existing frontends
+          kubectl delete -f infra/k8s/client-frontend-deployment.yaml --ignore-not-found=true
+          kubectl delete -f infra/k8s/admin-frontend-deployment.yaml --ignore-not-found=true
+          kubectl delete -f infra/k8s/restaurant-frontend-deployment.yaml --ignore-not-found=true
+          
+          echo "Waiting for old frontends to be cleaned up..."
+          Start-Sleep -Seconds 10
+          
+          # Deploy new frontends
+          kubectl apply -f infra/k8s/client-frontend-deployment.yaml
+          kubectl apply -f infra/k8s/client-frontend-service.yaml
+          kubectl apply -f infra/k8s/admin-frontend-deployment.yaml
+          kubectl apply -f infra/k8s/admin-frontend-service.yaml
+          kubectl apply -f infra/k8s/restaurant-frontend-deployment.yaml
+          kubectl apply -f infra/k8s/restaurant-frontend-service.yaml
 
-      - name: Wait for Backend Rollout
+      - name: Deploy Nginx Gateway
         run: |
-          echo "Waiting for backend services to roll out..."
-          kubectl rollout status deployment/auth-service -n cnpm-food-delivery --timeout=5m
-          kubectl rollout status deployment/restaurant-service -n cnpm-food-delivery --timeout=5m
-          kubectl rollout status deployment/order-service -n cnpm-food-delivery --timeout=5m
-          kubectl rollout status deployment/payment-service -n cnpm-food-delivery --timeout=5m
+          kubectl apply -f infra/k8s/nginx-configmap.yaml
+          kubectl apply -f infra/k8s/nginx-deployment.yaml
+          kubectl apply -f infra/k8s/nginx-service.yaml
 
-      - name: Wait for Frontend Rollout
+      - name: Wait for deployments to be ready
         run: |
-          echo "Waiting for frontend apps to roll out..."
-          kubectl rollout status deployment/client-frontend -n cnpm-food-delivery --timeout=5m
-          kubectl rollout status deployment/admin-frontend -n cnpm-food-delivery --timeout=5m
-          kubectl rollout status deployment/restaurant-frontend -n cnpm-food-delivery --timeout=5m
+          echo "Waiting for services to be ready (this may take 2-3 minutes)..."
+          kubectl rollout status deployment/auth-service -n cnpm-food-delivery --timeout=5m; if (!$?) { echo "Auth service timeout" }
+          kubectl rollout status deployment/restaurant-service -n cnpm-food-delivery --timeout=5m; if (!$?) { echo "Restaurant service timeout" }
+          kubectl rollout status deployment/order-service -n cnpm-food-delivery --timeout=5m; if (!$?) { echo "Order service timeout" }
+          kubectl rollout status deployment/payment-service -n cnpm-food-delivery --timeout=5m; if (!$?) { echo "Payment service timeout" }
+          kubectl rollout status deployment/client-frontend -n cnpm-food-delivery --timeout=5m; if (!$?) { echo "Client frontend timeout" }
+          kubectl rollout status deployment/admin-frontend -n cnpm-food-delivery --timeout=5m; if (!$?) { echo "Admin frontend timeout" }
+          kubectl rollout status deployment/restaurant-frontend -n cnpm-food-delivery --timeout=5m; if (!$?) { echo "Restaurant frontend timeout" }
+          kubectl rollout status deployment/nginx-gateway -n cnpm-food-delivery --timeout=5m; if (!$?) { echo "Nginx timeout" }
 
+      # 5️⃣ Verify deployment
       - name: Verify Deployment
         run: |
           echo "=== Pods Status ==="
@@ -163,20 +197,9 @@ jobs:
           echo "=== Services ==="
           kubectl get svc -n cnpm-food-delivery
           echo ""
-          echo "=== Deployments ==="
+          echo "=== Deployment Summary ==="
           kubectl get deployments -n cnpm-food-delivery
-
-      - name: Get LoadBalancer URL
-        run: |
+          echo ""
           echo "=== Access URLs ==="
-          NGINX_IP=$(kubectl get svc nginx-gateway -n cnpm-food-delivery -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          if [ -z "$NGINX_IP" ]; then
-            echo "LoadBalancer IP not assigned yet. Using port-forward instead:"
-            echo "Run: kubectl port-forward -n cnpm-food-delivery svc/nginx-gateway 8080:80"
-            echo "Then access: http://localhost:8080"
-          else
-            echo "Client App: http://$NGINX_IP"
-            echo "Admin App: http://$NGINX_IP/admin"
-            echo "Restaurant App: http://$NGINX_IP/restaurant"
-          fi
-  # ==================== Code Quality & Security Checks ====================
+          echo "Run: kubectl port-forward -n cnpm-food-delivery svc/nginx-gateway 8080:80"
+          echo "Then access: http://localhost:8080"
