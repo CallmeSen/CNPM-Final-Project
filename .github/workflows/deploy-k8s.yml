@@ -179,3 +179,4 @@ jobs:
             echo "Admin App: http://$NGINX_IP/admin"
             echo "Restaurant App: http://$NGINX_IP/restaurant"
           fi
+  # ==================== Code Quality & Security Checks ====================
