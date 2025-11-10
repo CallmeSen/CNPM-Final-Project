@@ -112,9 +112,7 @@ const OrderForm = ({ addOrder }: OrderFormProps) => {
 
     if (errors.items) {
       const newErrors: FormErrors = { ...errors };
-      if (newErrors.items) {
-        newErrors.items = newErrors.items.filter((_, itemIndex) => itemIndex !== index);
-      }
+      newErrors.items = newErrors.items.filter((_, itemIndex) => itemIndex !== index);
       setErrors(newErrors);
     }
   };
