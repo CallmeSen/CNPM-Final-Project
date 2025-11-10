@@ -9,7 +9,7 @@ function ContactAndFeedback() {
     <div className="contact-feedback-page">
       <Header />
       <section className="contact-feedback-hero-section">
-        <h1>We'd Love to Hear From You</h1>
+        <h1>We&apos;d Love to Hear From You</h1>
         <p>Contact us for any inquiries or share your valuable feedback to help us improve.</p>
       </section>
 
