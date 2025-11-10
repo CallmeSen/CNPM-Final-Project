@@ -1,4 +1,4 @@
-name: Fastie.Saigon Production Deployment
+name: frontend-deploy
 
 on:
   release:
@@ -45,16 +45,15 @@ jobs:
           REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL }}
           REACT_APP_STRIPE_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_STRIPE_PUBLISHABLE_KEY }}
 
-      # Build Admin App
-      - name: Build Admin App
+      # Build Admin App (Next.js)
+      - name: Build Admin App (Next.js)
         working-directory: frontend/admin
         run: |
           npm ci
           npm run build
         env:
           CI: false
-          REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL }}
-          REACT_APP_STRIPE_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_STRIPE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_BACKEND_URL: ${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
 
       # Build Restaurant App
       - name: Build Restaurant App
@@ -78,7 +77,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: admin-production-build
-          path: frontend/admin/build
+          path: frontend/admin/.next
 
       - name: Upload Restaurant Build
         uses: actions/upload-artifact@v4
