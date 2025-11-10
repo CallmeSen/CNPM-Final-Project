@@ -18,7 +18,7 @@ jobs:
     
     steps:
       - name: Clean temp directory
-        shell: pwsh
+        shell: powershell
         run: |
           # Clean temp folder
           if (Test-Path "$env:RUNNER_TEMP") {
