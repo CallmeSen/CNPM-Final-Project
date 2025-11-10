@@ -1,10 +1,14 @@
 # Dependencies
 node_modules/
-
+mongodata/
+prompts/
+chatmodes/
+backend/delivery_service/
 # Environment
 .env
 .env.local
 .env.docker
+infra/k8s/secrets.yaml
 # Builds
 build/
 dist/
@@ -12,3 +16,5 @@ dist/
 # Misc
 *.log
 *.tmp
+CLAUDE.md
+.github/copilot-instructions.md

@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-payment
+  namespace: cnpm-food-delivery
+spec:
+  selector:
+    app: mongodb-payment
+  ports:
+    - port: 27017
+      targetPort: 27017
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-payment
+  namespace: cnpm-food-delivery
+spec:
+  serviceName: mongodb-payment
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb-payment
+  template:
+    metadata:
+      labels:
+        app: mongodb-payment
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:latest
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: "admin"
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: "admin123"
+            - name: MONGO_INITDB_DATABASE
+              value: "Payment"
+          volumeMounts:
+            - name: mongodb-payment-data
+              mountPath: /data/db
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: init-script
+          configMap:
+            name: mongodb-payment-init
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-payment-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-payment-init
+  namespace: cnpm-food-delivery
+data:
+  init-payment.js: |
+    db = db.getSiblingDB('Payment');
+    db.createCollection('payments');
+    db.createCollection('transactions');
+    print('Payment database initialized');

@@ -18,6 +18,9 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yml'
+  schedule:
+    # Run security checks weekly on Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
   workflow_dispatch:
     inputs:
       skip_tests:
@@ -25,16 +28,150 @@ on:
         required: false
         default: 'false'
 
+env:
+  NODE_VERSION_LATEST: '24.8.0'
+
 jobs:
+  # ==================== Code Quality & Security Checks ====================
+  code-quality:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full git history for better analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LATEST }}
+
+      # Client App Quality
+      - name: Check Client App Dependencies
+        working-directory: frontend/client
+        run: |
+          npm ci
+          echo "Checking for outdated packages..."
+          npm outdated || true
+
+      # Admin App Quality
+      - name: Check Admin App Dependencies
+        working-directory: frontend/admin
+        run: |
+          npm ci
+          echo "Checking for outdated packages..."
+          npm outdated || true
+
+      # Restaurant App Quality
+      - name: Check Restaurant App Dependencies
+        working-directory: frontend/restaurant
+        run: |
+          npm ci
+          echo "Checking for outdated packages..."
+          npm outdated || true
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LATEST }}
+
+      - name: Security Audit - Client App
+        working-directory: frontend/client
+        run: |
+          npm ci
+          echo "Running security audit for Client App..."
+          npm audit --audit-level=moderate || true
+          npm audit fix --dry-run || true
+
+      - name: Security Audit - Admin App
+        working-directory: frontend/admin
+        run: |
+          npm ci
+          echo "Running security audit for Admin App..."
+          npm audit --audit-level=moderate || true
+          npm audit fix --dry-run || true
+
+      - name: Security Audit - Restaurant App
+        working-directory: frontend/restaurant
+        run: |
+          npm ci
+          echo "Running security audit for Restaurant App..."
+          npm audit --audit-level=moderate || true
+          npm audit fix --dry-run || true
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+        with:
+          fail-on-severity: moderate
+
+  code-format-check:
+    name: Code Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LATEST }}
+
+      - name: Check code formatting
+        run: |
+          echo "Checking code formatting..."
+          echo "Note: Add prettier or eslint configuration to enforce formatting"
+          # npm run format:check || echo "No format check script found"
+
+  lint-dockerfiles:
+    name: Lint Dockerfiles
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint Dockerfiles
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: frontend/*/Dockerfile
+          recursive: true
+          ignore: DL3008,DL3009
+
+  # ==================== Build & Test Jobs ====================
+  # ==================== Build & Test Jobs ====================
   # Client App (Fastie.Saigon Customer App - Port 3000)
   client-app:
     name: Client App CI
     runs-on: ubuntu-latest
+    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles, bundle-size-check]
+    if: github.event.inputs.skip_tests != 'true' && always()
     defaults:
       run:
         working-directory: frontend/client
 
     strategy:
+      fail-fast: false
       matrix:
         node-version: ['24.8.0']
 
@@ -48,6 +185,14 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
           cache-dependency-path: frontend/client/package-lock.json
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: frontend/client/node_modules
+          key: ${{ runner.os }}-client-${{ matrix.node-version }}-${{ hashFiles('frontend/client/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-client-${{ matrix.node-version }}-
 
       - name: Install dependencies
         run: npm ci
@@ -88,15 +233,27 @@ jobs:
           path: frontend/client/coverage
           retention-days: 7
 
+      - name: Upload coverage to Codecov
+        if: ${{ hashFiles('frontend/client/coverage/**') != '' }}
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./frontend/client/coverage/lcov.info
+          flags: client-app-node-${{ matrix.node-version }}
+          name: client-app-coverage-${{ matrix.node-version }}
+          fail_ci_if_error: false
+
   # Admin App (SuperAdmin Frontend - Port 3001) - Next.js App
   admin-app:
     name: Admin App CI (Next.js)
     runs-on: ubuntu-latest
+    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles, bundle-size-check]
+    if: github.event.inputs.skip_tests != 'true' && always()
     defaults:
       run:
         working-directory: frontend/admin
 
     strategy:
+      fail-fast: false
       matrix:
         node-version: ['24.8.0']
 
@@ -110,6 +267,14 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
           cache-dependency-path: frontend/admin/package-lock.json
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: frontend/admin/node_modules
+          key: ${{ runner.os }}-admin-${{ matrix.node-version }}-${{ hashFiles('frontend/admin/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-admin-${{ matrix.node-version }}-
 
       - name: Install dependencies
         run: npm ci
@@ -143,15 +308,26 @@ jobs:
           path: frontend/admin/coverage
           retention-days: 7
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./frontend/admin/coverage/lcov.info
+          flags: admin-app-node-${{ matrix.node-version }}
+          name: admin-app-coverage-${{ matrix.node-version }}
+          fail_ci_if_error: false
+
   # Restaurant App (Restaurant Admin Frontend - Port 3002)
   restaurant-app:
     name: Restaurant App CI
     runs-on: ubuntu-latest
+    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles, bundle-size-check]
+    if: github.event.inputs.skip_tests != 'true' && always()
     defaults:
       run:
         working-directory: frontend/restaurant
 
     strategy:
+      fail-fast: false
       matrix:
         node-version: ['24.8.0']
 
@@ -165,6 +341,14 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
           cache-dependency-path: frontend/restaurant/package-lock.json
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: frontend/restaurant/node_modules
+          key: ${{ runner.os }}-restaurant-${{ matrix.node-version }}-${{ hashFiles('frontend/restaurant/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-restaurant-${{ matrix.node-version }}-
 
       - name: Install dependencies
         run: npm ci
@@ -204,4 +388,74 @@ jobs:
           name: restaurant-coverage-${{ matrix.node-version }}
           path: frontend/restaurant/coverage
           retention-days: 7
+
+      - name: Upload coverage to Codecov
+        if: ${{ hashFiles('frontend/restaurant/coverage/**') != '' }}
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./frontend/restaurant/coverage/lcov.info
+          flags: restaurant-app-node-${{ matrix.node-version }}
+          name: restaurant-app-coverage-${{ matrix.node-version }}
+          fail_ci_if_error: false
+
+  # ==================== Performance & Bundle Size ====================
+  bundle-size-check:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LATEST }}
+
+      - name: Install and build Client App
+        working-directory: frontend/client
+        run: |
+          npm ci
+          npm run build
+        env:
+          CI: false
+        continue-on-error: true
+
+      - name: Install and build Admin App
+        working-directory: frontend/admin
+        run: |
+          npm ci
+          npm run build
+        env:
+          CI: false
+        continue-on-error: true
+
+      - name: Install and build Restaurant App
+        working-directory: frontend/restaurant
+        run: |
+          npm ci
+          npm run build
+        env:
+          CI: false
+        continue-on-error: true
+
+      - name: Analyze bundle sizes
+        run: |
+          echo "Bundle Size Analysis"
+          echo "======================="
+          for app in client admin restaurant; do
+            if [ -d "frontend/${app}/.next" ]; then
+              size=$(du -sh "frontend/${app}/.next" | cut -f1)
+              echo "$app: $size"
+            fi
+          done
+        continue-on-error: true
+
+      - name: Comment bundle size on PR
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Bundle sizes reported above"
+          echo "Consider adding bundle size comparison with main branch"
+        continue-on-error: true
 
