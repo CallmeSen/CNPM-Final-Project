@@ -1,0 +1,11 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/checkout/page": "app/checkout/page.js",
+  "/customer/order-details/[id]/page": "app/customer/order-details/[id]/page.js",
+  "/customer/order-history/page": "app/customer/order-history/page.js",
+  "/customer/restaurant/[restaurantId]/foods/page": "app/customer/restaurant/[restaurantId]/foods/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/orders/create-from-cart/page": "app/orders/create-from-cart/page.js",
+  "/page": "app/page.js"
+}

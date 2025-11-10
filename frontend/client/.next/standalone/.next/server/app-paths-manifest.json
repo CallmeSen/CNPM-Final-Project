@@ -1,0 +1,22 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/about/page": "app/about/page.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/auth/register/page": "app/auth/register/page.js",
+  "/checkout/page": "app/checkout/page.js",
+  "/contact/page": "app/contact/page.js",
+  "/customer/cart/page": "app/customer/cart/page.js",
+  "/customer/order-details/[id]/page": "app/customer/order-details/[id]/page.js",
+  "/customer/order-history/page": "app/customer/order-history/page.js",
+  "/customer/profile/page": "app/customer/profile/page.js",
+  "/customer/restaurant/[restaurantId]/foods/page": "app/customer/restaurant/[restaurantId]/foods/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/orders/create-from-cart/page": "app/orders/create-from-cart/page.js",
+  "/orders/delete/[id]/page": "app/orders/delete/[id]/page.js",
+  "/orders/details/[id]/page": "app/orders/details/[id]/page.js",
+  "/orders/edit/[id]/page": "app/orders/edit/[id]/page.js",
+  "/orders/new/page": "app/orders/new/page.js",
+  "/orders/page": "app/orders/page.js",
+  "/page": "app/page.js",
+  "/privacy/page": "app/privacy/page.js"
+}

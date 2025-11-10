@@ -1,0 +1,90 @@
+/* [project]/src/app/styles/Sidebar.css [app-client] (css) */
+.sidebar {
+  color: #e0e0e0;
+  background-color: #1a1a2e;
+  flex-direction: column;
+  width: 250px;
+  height: 100vh;
+  transition: width .3s;
+  display: flex;
+  position: fixed;
+  top: 0;
+  left: 0;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, .1);
+}
+
+.sidebar-header {
+  text-align: center;
+  background-color: #162447;
+  border-bottom: 1px solid #1f4068;
+  padding: 20px;
+}
+
+.sidebar-header h3 {
+  color: #fff;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.sidebar-nav {
+  flex-grow: 1;
+  margin-top: 20px;
+}
+
+.sidebar-link {
+  color: #e0e0e0;
+  align-items: center;
+  padding: 15px 20px;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: background-color .2s, color .2s;
+  display: flex;
+}
+
+.sidebar-link:hover {
+  color: #fff;
+  background-color: #1f4068;
+}
+
+.sidebar-link.active {
+  color: #fff;
+  background-color: #e94560;
+  font-weight: bold;
+}
+
+.sidebar-link svg {
+  margin-right: 15px;
+  font-size: 1.2rem;
+}
+
+.sidebar-footer {
+  border-top: 1px solid #1f4068;
+  padding: 20px;
+}
+
+.logout-button {
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  background-color: #e94560;
+  border: none;
+  border-radius: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 15px;
+  font-size: 1rem;
+  transition: background-color .2s;
+  display: flex;
+}
+
+.logout-button:hover {
+  background-color: #d43d51;
+}
+
+.logout-button svg {
+  margin-right: 15px;
+  font-size: 1.2rem;
+}
+
+/*# sourceMappingURL=src_app_styles_Sidebar_css_bad6b30c._.single.css.map*/
