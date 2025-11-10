@@ -1,0 +1,490 @@
+/* [project]/src/app/styles/auth-login.css [app-client] (css) */
+.auth-login-wrapper {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+}
+
+.auth-login-brand {
+  color: #fff;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-login-brand:before {
+  content: "";
+  background: radial-gradient(circle, rgba(255, 255, 255, .1) 0%, rgba(0, 0, 0, 0) 70%);
+  width: 200%;
+  height: 200%;
+  animation: 15s ease-in-out infinite pulse;
+  position: absolute;
+  top: -50%;
+  left: -50%;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: .5;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: .8;
+    transform: scale(1.1);
+  }
+}
+
+.auth-login-brand-content {
+  z-index: 1;
+  text-align: center;
+  max-width: 500px;
+  position: relative;
+}
+
+.auth-login-logo {
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  display: flex;
+}
+
+.auth-login-logo-icon {
+  font-size: 4rem;
+  animation: 2s infinite bounce;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.auth-login-logo-text {
+  background: linear-gradient(to right, #fff, #f0f0f0);
+  -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 800;
+}
+
+.auth-login-brand-title {
+  margin-bottom: 1rem;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.auth-login-brand-subtitle {
+  opacity: .9;
+  margin-bottom: 3rem;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.auth-login-brand-features {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.5rem;
+  display: flex;
+}
+
+.auth-login-feature {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, .1);
+  border-radius: 50px;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1rem 1.5rem;
+  font-size: 1.1rem;
+  transition: transform .3s, background .3s;
+  display: flex;
+}
+
+.auth-login-feature:hover {
+  background: rgba(255, 255, 255, .2);
+  transform: translateX(10px);
+}
+
+.auth-login-feature-icon {
+  font-size: 1.5rem;
+}
+
+.auth-login-form-side {
+  background: #fff;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  display: flex;
+}
+
+.auth-login-form-container {
+  width: 100%;
+  max-width: 480px;
+  padding: 2.5rem;
+}
+
+.auth-login-back-link {
+  margin-bottom: 2rem;
+}
+
+.auth-login-back-btn {
+  color: #667eea;
+  align-items: center;
+  gap: .5rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: transform .2s;
+  display: inline-flex;
+}
+
+.auth-login-back-btn:hover {
+  transform: translateX(-5px);
+}
+
+.auth-login-form-header {
+  margin-bottom: 2rem;
+}
+
+.auth-login-form-title {
+  color: #1a202c;
+  margin-bottom: .5rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.auth-login-form-subtitle {
+  color: #718096;
+  font-size: .95rem;
+}
+
+.auth-login-error {
+  color: #c33;
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 8px;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  animation: .3s shake;
+  display: flex;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-10px);
+  }
+
+  75% {
+    transform: translateX(10px);
+  }
+}
+
+.auth-login-error-icon {
+  font-size: 1.25rem;
+}
+
+.auth-login-form {
+  flex-direction: column;
+  gap: 1.5rem;
+  display: flex;
+}
+
+.auth-login-input-group {
+  flex-direction: column;
+  gap: .5rem;
+  display: flex;
+}
+
+.auth-login-label {
+  color: #2d3748;
+  font-size: .9rem;
+  font-weight: 600;
+}
+
+.auth-login-input-wrapper {
+  align-items: center;
+  display: flex;
+  position: relative;
+}
+
+.auth-login-input-icon {
+  color: #a0aec0;
+  pointer-events: none;
+  font-size: 1.25rem;
+  position: absolute;
+  left: 1rem;
+}
+
+.auth-login-input {
+  background: #f7fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  width: 100%;
+  padding: .875rem 1rem .875rem 3rem;
+  font-size: 1rem;
+  transition: all .3s;
+}
+
+.auth-login-input:focus {
+  background: #fff;
+  border-color: #667eea;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, .1);
+}
+
+.auth-login-password-toggle {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: .25rem;
+  font-size: 1.25rem;
+  transition: transform .2s;
+  position: absolute;
+  right: 1rem;
+}
+
+.auth-login-password-toggle:hover {
+  transform: scale(1.1);
+}
+
+.auth-login-options {
+  justify-content: space-between;
+  align-items: center;
+  margin-top: -.5rem;
+  display: flex;
+}
+
+.auth-login-remember {
+  color: #4a5568;
+  cursor: pointer;
+  align-items: center;
+  gap: .5rem;
+  font-size: .9rem;
+  display: flex;
+}
+
+.auth-login-remember input {
+  cursor: pointer;
+  width: 1rem;
+  height: 1rem;
+}
+
+.auth-login-forgot {
+  color: #667eea;
+  font-size: .9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color .2s;
+}
+
+.auth-login-forgot:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+.auth-login-submit-btn {
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  justify-content: center;
+  align-items: center;
+  gap: .5rem;
+  width: 100%;
+  margin-top: .5rem;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all .3s;
+  display: flex;
+}
+
+.auth-login-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, .3);
+}
+
+.auth-login-submit-btn:disabled {
+  opacity: .7;
+  cursor: not-allowed;
+}
+
+.auth-login-spinner {
+  border: 2px solid rgba(255, 255, 255, .3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  width: 1rem;
+  height: 1rem;
+  animation: .6s linear infinite spin;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.auth-login-divider {
+  text-align: center;
+  color: #a0aec0;
+  align-items: center;
+  margin: 2rem 0;
+  font-size: .9rem;
+  display: flex;
+}
+
+.auth-login-divider:before, .auth-login-divider:after {
+  content: "";
+  border-bottom: 1px solid #e2e8f0;
+  flex: 1;
+}
+
+.auth-login-divider span {
+  padding: 0 1rem;
+}
+
+.auth-login-social {
+  flex-direction: column;
+  gap: 1rem;
+  display: flex;
+}
+
+.auth-login-social-btn {
+  cursor: pointer;
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  justify-content: center;
+  align-items: center;
+  gap: .75rem;
+  width: 100%;
+  padding: .875rem;
+  font-size: .95rem;
+  font-weight: 500;
+  transition: all .3s;
+  display: flex;
+}
+
+.auth-login-social-btn:hover {
+  background: #f7fafc;
+  border-color: #cbd5e0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
+}
+
+.auth-login-social-btn span {
+  font-size: 1.25rem;
+}
+
+.auth-login-google {
+  color: #4285f4;
+}
+
+.auth-login-facebook {
+  color: #1877f2;
+}
+
+.auth-login-signup-link {
+  text-align: center;
+  color: #718096;
+  margin-top: 2rem;
+  font-size: .95rem;
+}
+
+.auth-login-link {
+  color: #667eea;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color .2s;
+}
+
+.auth-login-link:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+@media (max-width: 968px) {
+  .auth-login-wrapper {
+    flex-direction: column;
+  }
+
+  .auth-login-brand {
+    min-height: 40vh;
+    padding: 2rem;
+  }
+
+  .auth-login-brand-title {
+    font-size: 2rem;
+  }
+
+  .auth-login-brand-features {
+    flex-flow: wrap;
+    justify-content: center;
+  }
+
+  .auth-login-feature {
+    flex: 1;
+    width: auto;
+    min-width: 200px;
+  }
+
+  .auth-login-form-container {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .auth-login-brand {
+    padding: 1.5rem;
+  }
+
+  .auth-login-logo-text {
+    font-size: 2rem;
+  }
+
+  .auth-login-brand-title {
+    font-size: 1.5rem;
+  }
+
+  .auth-login-brand-subtitle {
+    font-size: 1rem;
+  }
+
+  .auth-login-form-title {
+    font-size: 1.5rem;
+  }
+
+  .auth-login-options {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .75rem;
+  }
+
+  .auth-login-social {
+    gap: .75rem;
+  }
+}
+
+/*# sourceMappingURL=src_app_styles_auth-login_d6370a25.css.map*/
