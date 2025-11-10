@@ -1,0 +1,355 @@
+services:
+  # ==================== Database ====================
+  
+  # MongoDB for Auth Service
+  mongodb:
+    container_name: mongodb-auth
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: admin
+      MONGODB_INITDB_ROOT_PASSWORD: admin123
+      MONGODB_INITDB_DATABASE: Auth
+    command: ["mongod", "--bind_ip_all"]
+    image: mongodb/mongodb-community-server:latest
+    volumes:
+      - mongodata-auth:/data/db
+      - mongoconfig-auth:/data/configdb
+      - ./infra/mongodb/init-scripts/init-auth.js:/docker-entrypoint-initdb.d/init-auth.js:ro
+    ports:
+      - "28016:27017"
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # MongoDB for Restaurant Service
+  mongodb2:
+    container_name: mongodb-restaurant
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: admin
+      MONGODB_INITDB_ROOT_PASSWORD: admin123
+      MONGODB_INITDB_DATABASE: Restaurant
+    command: ["mongod", "--bind_ip_all"]
+    image: mongodb/mongodb-community-server:latest
+    volumes:
+      - mongodata-restaurant:/data/db
+      - mongoconfig-restaurant:/data/configdb
+      - ./infra/mongodb/init-scripts/init-restaurant.js:/docker-entrypoint-initdb.d/init-restaurant.js:ro
+    ports:
+      - "28017:27017"
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # MongoDB for Order Service
+  mongodb3:
+    container_name: mongodb-order
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: admin
+      MONGODB_INITDB_ROOT_PASSWORD: admin123
+      MONGODB_INITDB_DATABASE: Order
+    command: ["mongod", "--bind_ip_all"]
+    image: mongodb/mongodb-community-server:latest
+    volumes:
+      - mongodata-order:/data/db
+      - mongoconfig-order:/data/configdb
+      - ./infra/mongodb/init-scripts/init-order.js:/docker-entrypoint-initdb.d/init-order.js:ro
+    ports:
+      - "28018:27017"
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  # MongoDB for Payment Service
+  mongodb4:
+    container_name: mongodb-payment
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: admin
+      MONGODB_INITDB_ROOT_PASSWORD: admin123
+      MONGODB_INITDB_DATABASE: Payment
+    command: ["mongod", "--bind_ip_all"]
+    image: mongodb/mongodb-community-server:latest
+    volumes:
+      - mongodata-payment:/data/db
+      - mongoconfig-payment:/data/configdb
+      - ./infra/mongodb/init-scripts/init-payment.js:/docker-entrypoint-initdb.d/init-payment.js:ro
+    ports:
+      - "28019:27017"
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # ==================== Backend Services ====================
+  
+  # Auth Service
+  auth-service:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+    container_name: cnpm-auth-service
+    ports:
+      - "5001:5001"
+    env_file:
+      - .env.docker
+    volumes:
+      - ./backend/auth-service/uploads:/app/uploads
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # Order Service
+  order-service:
+    build:
+      context: ./backend/order-service
+      dockerfile: Dockerfile
+    container_name: cnpm-order-service
+    ports:
+      - "5005:5005"
+    env_file:
+      - .env.docker
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    depends_on:
+      mongodb3:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5005/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # Restaurant Service
+  restaurant-service:
+    build:
+      context: ./backend/restaurant-service
+      dockerfile: Dockerfile
+    container_name: cnpm-restaurant-service
+    ports:
+      - "5002:5002"
+    env_file:
+      - .env.docker
+    volumes:
+      - ./backend/restaurant-service/uploads:/app/uploads
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    depends_on:
+      mongodb2:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # Payment Service
+  payment-service:
+    build:
+      context: ./backend/payment-service
+      dockerfile: Dockerfile
+    container_name: cnpm-payment-service
+    ports:
+      - "5004:5004"
+    env_file:
+      - .env.docker
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    depends_on:
+      mongodb4:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5004/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # ==================== Frontend Services ====================
+  
+  # Client Frontend
+  client:
+    build:
+      context: ./frontend/client
+      dockerfile: Dockerfile
+      args:
+        - AUTH_SERVICE_URL=http://auth-service:5001
+        - RESTAURANT_SERVICE_URL=http://restaurant-service:5002
+        - ORDER_SERVICE_URL=http://order-service:5005
+        - PAYMENT_SERVICE_URL=http://payment-service:5004
+        - REACT_APP_STRIPE_PUBLISHABLE_KEY=${REACT_APP_STRIPE_PUBLISHABLE_KEY}
+    container_name: cnpm-client
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.docker
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    depends_on:
+      - auth-service
+      - order-service
+      - restaurant-service
+      - payment-service
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # Admin Frontend
+  admin:
+    build:
+      context: ./frontend/admin
+      dockerfile: Dockerfile
+      args:
+        - AUTH_SERVICE_URL=http://auth-service:5001
+        - RESTAURANT_SERVICE_URL=http://restaurant-service:5002
+        - ORDER_SERVICE_URL=http://order-service:5005
+        - PAYMENT_SERVICE_URL=http://payment-service:5004
+    container_name: cnpm-admin
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env.docker
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    depends_on:
+      - auth-service
+      - order-service
+      - restaurant-service
+      - payment-service
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # Restaurant Frontend
+  restaurant:
+    build:
+      context: ./frontend/restaurant
+      dockerfile: Dockerfile
+      args:
+        - AUTH_SERVICE_URL=http://auth-service:5001
+        - RESTAURANT_SERVICE_URL=http://restaurant-service:5002
+        - ORDER_SERVICE_URL=http://order-service:5005
+        - PAYMENT_SERVICE_URL=http://payment-service:5004
+    container_name: cnpm-restaurant
+    ports:
+      - "3002:3002"
+    env_file:
+      - .env.docker
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    depends_on:
+      - auth-service
+      - restaurant-service
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # ==================== NGINX Reverse Proxy ====================
+
+  nginx:
+    build:
+      context: ./infra/nginx
+      dockerfile: Dockerfile
+    container_name: cnpm-nginx
+    ports:
+      - "80:80"
+    env_file:
+      - .env.docker
+    networks:
+      - cnpm-network
+    restart: unless-stopped
+    depends_on:
+      - auth-service
+      - order-service
+      - restaurant-service
+      - payment-service
+      - client
+      - admin
+      - restaurant
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+# Networks
+networks:
+  cnpm-network:
+    driver: bridge
+
+# Volumes
+volumes:
+  mongodata-auth:
+    driver: local
+  mongoconfig-auth:
+    driver: local
+  mongodata-restaurant:
+    driver: local
+  mongoconfig-restaurant:
+    driver: local
+  mongodata-order:
+    driver: local
+  mongoconfig-order:
+    driver: local
+  mongodata-payment:
+    driver: local
+  mongoconfig-payment:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+
