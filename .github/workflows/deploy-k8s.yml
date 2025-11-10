@@ -220,18 +220,53 @@ jobs:
           echo "Deployment rollout completed!"
         continue-on-error: true
 
-      # 5️⃣ Verify deployment
+      # 5️⃣ Deploy Monitoring Stack (Optional)
+      - name: Deploy Monitoring Stack
+        run: |
+          echo "Deploying Prometheus, Grafana, and Loki..."
+          
+          # Deploy Prometheus
+          kubectl apply -f infra/k8s/monitoring/prometheus.yaml
+          
+          # Deploy Grafana
+          kubectl apply -f infra/k8s/monitoring/grafana.yaml
+          
+          # Deploy Loki & Promtail
+          kubectl apply -f infra/k8s/monitoring/loki.yaml
+          
+          echo "Waiting for monitoring stack to be ready..."
+          Start-Sleep -Seconds 20
+          
+          kubectl rollout status deployment/prometheus -n cnpm-food-delivery --timeout=3m
+          if ($LASTEXITCODE -ne 0) { echo "Warning: Prometheus timeout" }
+          
+          kubectl rollout status deployment/grafana -n cnpm-food-delivery --timeout=3m
+          if ($LASTEXITCODE -ne 0) { echo "Warning: Grafana timeout" }
+          
+          kubectl rollout status deployment/loki -n cnpm-food-delivery --timeout=3m
+          if ($LASTEXITCODE -ne 0) { echo "Warning: Loki timeout" }
+          
+          echo "Monitoring stack deployed!"
+        continue-on-error: true
+
+      # 6️⃣ Verify deployment
       - name: Verify Deployment
         run: |
-          echo "=== Pods Status ==="
+          echo "=== All Pods (App + Monitoring) ==="
           kubectl get pods -n cnpm-food-delivery
           echo ""
-          echo "=== Services ==="
+          echo "=== All Services (App + Monitoring) ==="
           kubectl get svc -n cnpm-food-delivery
           echo ""
-          echo "=== Deployment Summary ==="
+          echo "=== All Deployments ==="
           kubectl get deployments -n cnpm-food-delivery
           echo ""
           echo "=== Access URLs ==="
-          echo "Run: kubectl port-forward -n cnpm-food-delivery svc/nginx-gateway 8080:80"
-          echo "Then access: http://localhost:8080"
+          echo "Application: kubectl port-forward -n cnpm-food-delivery svc/nginx-gateway 8080:80"
+          echo "  Then: http://localhost:8080"
+          echo ""
+          echo "Grafana: kubectl port-forward -n cnpm-food-delivery svc/grafana 3000:3000"
+          echo "  Then: http://localhost:3000 (admin/admin123)"
+          echo ""
+          echo "Prometheus: kubectl port-forward -n cnpm-food-delivery svc/prometheus 9090:9090"
+          echo "  Then: http://localhost:9090"
