@@ -228,6 +228,10 @@ jobs:
           # Deploy Prometheus
           kubectl apply -f infra/k8s/monitoring/prometheus.yaml
           
+          # Deploy Grafana Dashboards ConfigMaps
+          echo "Deploying Grafana dashboards..."
+          kubectl apply -f infra/k8s/monitoring/grafana-dashboards.yaml
+          
           # Deploy Grafana
           kubectl apply -f infra/k8s/monitoring/grafana.yaml
           
