@@ -74,8 +74,8 @@ function UsersPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/management/users', {
-        headers: { 'Authorization': `Bearer ${token}` },
+      const res = await fetch('/api/management/users', {
+        headers: { Authorization: `Bearer ${token}` },
       });
       
       if (res.ok) {
@@ -119,7 +119,7 @@ function UsersPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/management/users', {
+      const res = await fetch('/api/management/users', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -157,7 +157,7 @@ function UsersPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5001/api/management/users/${selectedUser._id}`, {
+      const res = await fetch(`/api/management/users/${selectedUser._id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -186,9 +186,9 @@ function UsersPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5001/api/management/users/${user._id}?userType=${user.userType}`, {
+      const res = await fetch(`/api/management/users/${user._id}?userType=${user.userType}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       
       const data = await res.json();
@@ -210,8 +210,8 @@ function UsersPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5001/api/management/users/${user._id}/logs`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+      const res = await fetch(`/api/management/users/${user._id}/logs`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
       
       if (res.ok) {
@@ -255,7 +255,7 @@ function UsersPage() {
   const handleUpdatePermissions = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5001/api/management/users/${selectedUser._id}/permissions`, {
+      const res = await fetch(`/api/management/users/${selectedUser._id}/permissions`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

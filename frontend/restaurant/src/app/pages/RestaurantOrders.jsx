@@ -32,7 +32,7 @@ function RestaurantOrders() {
   const fetchRestaurantProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/restaurant/profile', {
+      const res = await fetch('/api/restaurant/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -47,7 +47,7 @@ function RestaurantOrders() {
   const fetchOrders = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5005/api/orders', {
+      const response = await fetch('/api/orders', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -75,7 +75,7 @@ function RestaurantOrders() {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:5005/api/orders/${orderId}/status`,
+        `/api/orders/${orderId}/status`,
         {
           method: 'PATCH',
           headers: {
@@ -100,7 +100,7 @@ function RestaurantOrders() {
   const updatePaymentStatus = async (orderId, newPaymentStatus) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5005/api/orders/${orderId}`, {
+      const response = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -121,14 +121,22 @@ function RestaurantOrders() {
   };
 
   const filteredOrders = useMemo(() => {
-    if (filter === 'all') return orders;
+    let result = orders;
+    
+    // Filter by status
     if (filter === 'pending')
-      return orders.filter((o) => o.status === 'Pending');
-    if (filter === 'confirmed')
-      return orders.filter((o) => o.status === 'Confirmed');
-    if (filter === 'delivered')
-      return orders.filter((o) => o.status === 'Delivered');
-    return orders;
+      result = orders.filter((o) => o.status === 'Pending');
+    else if (filter === 'confirmed')
+      result = orders.filter((o) => o.status === 'Confirmed');
+    else if (filter === 'delivered')
+      result = orders.filter((o) => o.status === 'Delivered');
+    
+    // Sort by createdAt descending (newest first)
+    return result.sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.updatedAt);
+      const dateB = new Date(b.createdAt || b.updatedAt);
+      return dateB - dateA; // Newest first
+    });
   }, [orders, filter]);
 
   const currencyFormatter = useMemo(
@@ -261,3 +269,4 @@ function RestaurantOrders() {
 }
 
 export default RestaurantOrders;
+

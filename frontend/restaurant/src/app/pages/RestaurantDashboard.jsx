@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import RestaurantSidebar from '../components/RestaurantSidebar';
+import { buildImageUrl } from '../../config/api';
 import '../styles/rdashboard.css';
 
 function RestaurantDashboard() {
@@ -21,7 +22,7 @@ function RestaurantDashboard() {
   const fetchRestaurantProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/restaurant/profile', {
+      const res = await fetch('/api/restaurant/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) {
@@ -30,11 +31,15 @@ function RestaurantDashboard() {
       }
       const data = await res.json();
       if (res.ok) {
-        setRestaurant(data);
+        // Handle different response structures
+        const restaurantData = data.data || data;
+        console.log('Restaurant profile data:', restaurantData); // Debug log
+        setRestaurant(restaurantData);
       } else {
         alert(data.message || 'Failed to fetch profile');
       }
     } catch (err) {
+      console.error('Error fetching profile:', err);
       alert('Error fetching profile');
     }
   }, []);
@@ -71,7 +76,7 @@ function RestaurantDashboard() {
       const restaurantId = restaurant.id;
   
       // Call auth-service directly for file upload
-      const res = await fetch(`http://localhost:5001/api/auth/restaurant/profile/${restaurantId}`, {
+      const res = await fetch(`/api/auth/restaurant/profile/${restaurantId}`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -82,7 +87,9 @@ function RestaurantDashboard() {
       const data = await res.json();
       if (res.ok) {
         alert('Profile updated successfully!');
-        fetchRestaurantProfile();
+        console.log('Update response:', data); // Debug log
+        // Re-fetch the profile to get updated data including new image URL
+        await fetchRestaurantProfile();
         setEditProfile(false);
       } else {
         alert(data.message || 'Failed to update profile');
@@ -155,13 +162,22 @@ function RestaurantDashboard() {
                   id="profilePicture"
                   type="file"
                   accept="image/*"
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      console.log('Selected file:', file.name, file.size, file.type);
+                    }
                     setEditableProfile({
                       ...editableProfile,
-                      profilePictureFile: e.target.files?.[0],
-                    })
-                  }
+                      profilePictureFile: file,
+                    });
+                  }}
                 />
+                {editableProfile?.profilePictureFile && (
+                  <div style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                    Selected: {editableProfile.profilePictureFile.name}
+                  </div>
+                )}
               </div>
               <div className="form-actions">
                 <button
@@ -185,11 +201,11 @@ function RestaurantDashboard() {
               <div>
                 {restaurant.profilePicture && restaurant.profilePicture.trim() ? (
                   <img
-                    src={`http://localhost:5001${restaurant.profilePicture}`}
+                    src={buildImageUrl(restaurant.profilePicture) || 'https://placehold.co/150x150?text=No+Image'}
                     alt={restaurant.name || 'Restaurant'}
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                      e.target.src = 'https://placehold.co/150x150?text=No+Image';
                     }}
                   />
                 ) : (
@@ -227,3 +243,4 @@ function RestaurantDashboard() {
 }
 
 export default RestaurantDashboard;
+

@@ -249,6 +249,8 @@
   font-size: 1rem;
   transition: all 0.3s ease;
   background: #f7fafc;
+  /* Ensure user-entered text is dark for readability */
+  color: var(--color-black);
 }
 
 .auth-login-input:focus {
@@ -256,6 +258,12 @@
   border-color: #667eea;
   background: white;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Placeholder should remain a lighter gray so users can distinguish it from entered text */
+.auth-login-input::placeholder {
+  color: #9aa4b2; /* subtle gray */
+  opacity: 1; /* ensure consistent appearance across browsers */
 }
 
 .auth-login-password-toggle {

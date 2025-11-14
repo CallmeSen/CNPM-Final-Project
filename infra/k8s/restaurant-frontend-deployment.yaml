@@ -43,13 +43,13 @@ spec:
               cpu: "500m"
           livenessProbe:
             httpGet:
-              path: /
+              path: /restaurant
               port: 3002
             initialDelaySeconds: 30
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /
+              path: /restaurant
               port: 3002
             initialDelaySeconds: 10
             periodSeconds: 5

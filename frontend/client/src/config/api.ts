@@ -43,9 +43,27 @@ const buildServiceUrl = (baseUrl: string, path: string) => {
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
-  // Use proxy for /api/* and /uploads/* paths
-  if (shouldProxyApi && (normalizedPath.startsWith("/api/") || normalizedPath.startsWith("/uploads/"))) {
+  // Use proxy for /api/* paths
+  if (shouldProxyApi && normalizedPath.startsWith("/api/")) {
     return normalizedPath;
+  }
+
+  // Handle /uploads/* paths
+  if (normalizedPath.startsWith("/uploads/")) {
+    // When using API proxy (Docker/production with NGINX), always use relative path
+    // NGINX will route to correct backend service based on filename pattern
+    if (shouldProxyApi) {
+      return normalizedPath; // Let NGINX handle routing
+    }
+    
+    // When NOT using proxy (local development), use direct backend URLs
+    // Profile pictures (profilePicture-*) are in auth-service
+    // Food item images (image-*) are in restaurant-service
+    if (normalizedPath.includes("profilePicture-")) {
+      return `${AUTH_SERVICE_BASE_URL}${normalizedPath}`;
+    }
+    // Default to restaurant-service for food items and other uploads
+    return `${RESTAURANT_SERVICE_BASE_URL}${normalizedPath}`;
   }
 
   return `${baseUrl}${normalizedPath}`;

@@ -52,9 +52,9 @@ data:
                 proxy_cache_bypass $http_upgrade;
             }
 
-            # Admin Frontend  
+            # Admin Frontend - Keep /admin prefix (basePath)
             location /admin/ {
-                proxy_pass http://admin-frontend/;
+                proxy_pass http://admin-frontend;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection 'upgrade';
@@ -66,9 +66,9 @@ data:
                 return 301 /admin/;
             }
 
-            # Restaurant Frontend
+            # Restaurant Frontend - Keep /restaurant prefix (basePath)
             location /restaurant/ {
-                proxy_pass http://restaurant-frontend/;
+                proxy_pass http://restaurant-frontend;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection 'upgrade';
