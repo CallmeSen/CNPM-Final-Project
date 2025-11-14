@@ -83,11 +83,12 @@ function RestaurantRegister() {
           : 'Please enter a valid email address';
         break;
       case 'password':
+        // Allow letters, numbers, and common special characters (including . and -)
         const passwordRegex =
-          /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+          /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&.#\-_])[A-Za-z\d@$!%*?&.#\-_]{6,}$/;
         errorsCopy.password = passwordRegex.test(value)
           ? ''
-          : 'Password must be at least 6 characters, include a number and a special character';
+          : 'Password must be at least 6 characters, include a letter, a number, and a special character';
         break;
       default:
         break;
@@ -140,7 +141,7 @@ function RestaurantRegister() {
       formData.append('email', form.email);
       formData.append('password', form.password);
 
-      const res = await fetch('http://localhost:5001/api/auth/register/restaurant', {
+      const res = await fetch('/api/auth/register/restaurant', {
         method: 'POST',
         body: formData,
       });

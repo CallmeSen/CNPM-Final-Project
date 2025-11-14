@@ -20,7 +20,7 @@ function Availability() {
   const fetchRestaurantProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/restaurant/profile', {
+      const res = await fetch('/api/restaurant/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) {
@@ -44,7 +44,7 @@ function Availability() {
   const toggleAvailability = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/restaurant/availability', {
+      const res = await fetch('/api/restaurant/availability', {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -89,3 +89,4 @@ function Availability() {
 }
 
 export default Availability;
+

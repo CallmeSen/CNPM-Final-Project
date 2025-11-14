@@ -20,7 +20,7 @@ type NavItem = {
 };
 
 const primaryLinks: NavItem[] = [
-  { label: "Orders", to: "/orders" },
+  { label: "Orders", to: "/customer/order-history" },
   { label: "Wallet", to: "/wallet" },
   { label: "Restaurants", to: "/restaurants" },
 ];

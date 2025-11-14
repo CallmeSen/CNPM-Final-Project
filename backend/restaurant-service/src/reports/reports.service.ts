@@ -92,11 +92,12 @@ export class ReportsService {
 
       const orders = response.data;
 
-      // Filter and aggregate locally
+      // Filter and aggregate locally - only count delivered orders
       const filteredOrders = orders.filter(
         (order) =>
           order.restaurantId === restaurantId &&
           order.paymentStatus === 'Paid' &&
+          order.status === 'Delivered' &&
           new Date(order.createdAt) >= start &&
           new Date(order.createdAt) <= end,
       );
@@ -148,11 +149,12 @@ export class ReportsService {
 
       const orders = response.data;
 
-      // Filter paid orders within date range
+      // Filter paid and delivered orders within date range
       const filteredOrders = orders.filter(
         (order) =>
           order.restaurantId === restaurantId &&
           order.paymentStatus === 'Paid' &&
+          order.status === 'Delivered' &&
           new Date(order.createdAt) >= start &&
           new Date(order.createdAt) <= end,
       );
@@ -249,11 +251,12 @@ export class ReportsService {
 
       const orders = response.data;
 
-      // Filter and calculate order stats
+      // Filter and calculate order stats - only count delivered orders
       const filteredOrders = orders.filter(
         (order) =>
           order.restaurantId === restaurantId &&
           order.paymentStatus === 'Paid' &&
+          order.status === 'Delivered' &&
           new Date(order.createdAt) >= start &&
           new Date(order.createdAt) <= end,
       );

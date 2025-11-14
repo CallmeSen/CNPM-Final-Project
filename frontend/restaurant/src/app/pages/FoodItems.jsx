@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import RestaurantSidebar from '../components/RestaurantSidebar';
+import { buildImageUrl } from '../../config/api';
 import '../styles/rdashboard.css';
 
 function FoodItems() {
@@ -29,7 +30,7 @@ function FoodItems() {
   const fetchRestaurantProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/restaurant/profile', {
+      const res = await fetch('/api/restaurant/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) {
@@ -48,11 +49,28 @@ function FoodItems() {
   const fetchFoodItems = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/food-items/', {
+      console.log('Fetching food items with token:', token ? 'Token exists' : 'No token');
+      
+      // Use relative URL - Next.js rewrites will handle server-side
+      const apiUrl = `/api/food-items/`;
+      console.log('Fetching from:', apiUrl);
+      
+      const res = await fetch(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
+      console.log('Food items response status:', res.status);
       const data = await res.json();
-      if (res.ok) setFoodItems(data);
+      console.log('Food items data:', data);
+      
+      if (res.ok) {
+        setFoodItems(data);
+        console.log('Food items set:', data.length, 'items');
+      } else if (res.status === 401) {
+        handleUnauthorizedError();
+      } else {
+        console.error('Failed to fetch food items:', data);
+      }
     } catch (err) {
       console.error('Error fetching food items:', err);
     }
@@ -78,7 +96,7 @@ function FoodItems() {
       formData.append('category', newFoodItem.category);
       formData.append('image', newFoodItem.imageFile);
 
-      const res = await fetch('http://localhost:5002/api/food-items/create', {
+      const res = await fetch(`/api/food-items/create`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -106,7 +124,7 @@ function FoodItems() {
   
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5002/api/food-items/${id}`, {
+      const res = await fetch(`/api/food-items/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -138,7 +156,7 @@ function FoodItems() {
       if (editFoodItem.imageFile) {
         formData.append('image', editFoodItem.imageFile);
       }
-      const res = await fetch(`http://localhost:5002/api/food-items/${editFoodItem._id}`, {
+      const res = await fetch(`/api/food-items/${editFoodItem._id}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -206,8 +224,12 @@ function FoodItems() {
                         <td>
                           <div className="">
                             <img
-                              src={`http://localhost:5002${item.image}`}
+                              src={buildImageUrl(item.image) || 'https://placehold.co/100x100?text=No+Image'}
                               alt={item.name}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'https://placehold.co/100x100?text=No+Image';
+                              }}
                             />
                           </div>
                         </td>
@@ -406,3 +428,4 @@ function FoodItems() {
 }
 
 export default FoodItems;
+

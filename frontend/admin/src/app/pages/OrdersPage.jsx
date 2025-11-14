@@ -25,7 +25,7 @@ const OrdersPage = () => {
         const token = localStorage.getItem('token');
         
         // Fetch orders
-        const ordersRes = await fetch('http://localhost:5005/api/orders', {
+        const ordersRes = await fetch('/api/orders', {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
@@ -36,7 +36,7 @@ const OrdersPage = () => {
         const ordersData = await ordersRes.json();
         
         // Fetch restaurants to map IDs to names
-        const restaurantsRes = await fetch('http://localhost:5002/api/superadmin/restaurants', {
+        const restaurantsRes = await fetch('/api/superadmin/restaurants', {
           headers: { 'Authorization': `Bearer ${token}` },
         });
 
@@ -159,3 +159,4 @@ const OrdersPage = () => {
 };
 
 export default OrdersPage;
+

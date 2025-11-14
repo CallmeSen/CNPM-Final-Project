@@ -216,6 +216,9 @@ services:
         - ORDER_SERVICE_URL=http://order-service:5005
         - PAYMENT_SERVICE_URL=http://payment-service:5004
         - REACT_APP_STRIPE_PUBLISHABLE_KEY=${REACT_APP_STRIPE_PUBLISHABLE_KEY}
+        - USE_API_PROXY=true
+        - USE_NGINX_PROXY=true
+        - NGINX_URL=http://nginx
     container_name: cnpm-client
     ports:
       - "3000:3000"
@@ -246,6 +249,9 @@ services:
         - RESTAURANT_SERVICE_URL=http://restaurant-service:5002
         - ORDER_SERVICE_URL=http://order-service:5005
         - PAYMENT_SERVICE_URL=http://payment-service:5004
+        - USE_API_PROXY=true
+        - USE_NGINX_PROXY=true
+        - NGINX_URL=http://nginx
     container_name: cnpm-admin
     ports:
       - "3001:3001"
@@ -276,6 +282,9 @@ services:
         - RESTAURANT_SERVICE_URL=http://restaurant-service:5002
         - ORDER_SERVICE_URL=http://order-service:5005
         - PAYMENT_SERVICE_URL=http://payment-service:5004
+        - USE_API_PROXY=true
+        - USE_NGINX_PROXY=true
+        - NGINX_URL=http://nginx
     container_name: cnpm-restaurant
     ports:
       - "3002:3002"
@@ -305,6 +314,10 @@ services:
       - "80:80"
     env_file:
       - .env.docker
+    volumes:
+      # Mount uploads from backend services for serving static files
+      - ./backend/auth-service/uploads:/var/www/auth-uploads:ro
+      - ./backend/restaurant-service/uploads:/var/www/restaurant-uploads:ro
     networks:
       - cnpm-network
     restart: unless-stopped
