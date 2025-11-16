@@ -1,0 +1,135 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: export-frontends
+  namespace: cnpm-food-delivery
+  labels:
+    app: export-frontends
+    type: backup
+spec:
+  ttlSecondsAfterFinished: 86400  # Auto-cleanup after 24 hours
+  template:
+    metadata:
+      labels:
+        app: export-frontends
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: export-job-sa
+      containers:
+        - name: exporter
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "=== Starting Frontend Export Job ==="
+              echo "Timestamp: $(date)"
+              
+              # Create export directory
+              EXPORT_DIR="/exports/frontends-$(date +%Y%m%d-%H%M%S)"
+              mkdir -p $EXPORT_DIR
+              
+              echo "Export directory: $EXPORT_DIR"
+              
+              # Export Client Frontend
+              echo "Exporting client-frontend..."
+              kubectl get deployment client-frontend -n cnpm-food-delivery -o yaml > $EXPORT_DIR/client-frontend-deployment.yaml
+              kubectl get service client-frontend -n cnpm-food-delivery -o yaml > $EXPORT_DIR/client-frontend-service.yaml
+              kubectl get pods -l app=client-frontend -n cnpm-food-delivery -o yaml > $EXPORT_DIR/client-frontend-pods.yaml
+              
+              # Export Admin Frontend
+              echo "Exporting admin-frontend..."
+              kubectl get deployment admin-frontend -n cnpm-food-delivery -o yaml > $EXPORT_DIR/admin-frontend-deployment.yaml
+              kubectl get service admin-frontend -n cnpm-food-delivery -o yaml > $EXPORT_DIR/admin-frontend-service.yaml
+              kubectl get pods -l app=admin-frontend -n cnpm-food-delivery -o yaml > $EXPORT_DIR/admin-frontend-pods.yaml
+              
+              # Export Restaurant Frontend
+              echo "Exporting restaurant-frontend..."
+              kubectl get deployment restaurant-frontend -n cnpm-food-delivery -o yaml > $EXPORT_DIR/restaurant-frontend-deployment.yaml
+              kubectl get service restaurant-frontend -n cnpm-food-delivery -o yaml > $EXPORT_DIR/restaurant-frontend-service.yaml
+              kubectl get pods -l app=restaurant-frontend -n cnpm-food-delivery -o yaml > $EXPORT_DIR/restaurant-frontend-pods.yaml
+              
+              # Export NGINX Gateway
+              echo "Exporting nginx-gateway..."
+              kubectl get deployment nginx-gateway -n cnpm-food-delivery -o yaml > $EXPORT_DIR/nginx-gateway-deployment.yaml
+              kubectl get service nginx-gateway -n cnpm-food-delivery -o yaml > $EXPORT_DIR/nginx-gateway-service.yaml
+              kubectl get configmap nginx-config -n cnpm-food-delivery -o yaml > $EXPORT_DIR/nginx-configmap.yaml
+              kubectl get pods -l app=nginx-gateway -n cnpm-food-delivery -o yaml > $EXPORT_DIR/nginx-gateway-pods.yaml
+              
+              # Create summary file
+              echo "Creating export summary..."
+              cat > $EXPORT_DIR/README.md <<EOF
+              # Frontend Export Summary
+              
+              **Export Date**: $(date)
+              **Namespace**: cnpm-food-delivery
+              
+              ## Exported Resources
+              
+              ### Client Frontend (Port 3000)
+              - Deployment: client-frontend-deployment.yaml
+              - Service: client-frontend-service.yaml
+              - Pods: client-frontend-pods.yaml
+              - Replicas: $(kubectl get deployment client-frontend -n cnpm-food-delivery -o jsonpath='{.spec.replicas}')
+              - Image: $(kubectl get deployment client-frontend -n cnpm-food-delivery -o jsonpath='{.spec.template.spec.containers[0].image}')
+              
+              ### Admin Frontend (Port 3001)
+              - Deployment: admin-frontend-deployment.yaml
+              - Service: admin-frontend-service.yaml
+              - Pods: admin-frontend-pods.yaml
+              - Replicas: $(kubectl get deployment admin-frontend -n cnpm-food-delivery -o jsonpath='{.spec.replicas}')
+              - Image: $(kubectl get deployment admin-frontend -n cnpm-food-delivery -o jsonpath='{.spec.template.spec.containers[0].image}')
+              
+              ### Restaurant Frontend (Port 3002)
+              - Deployment: restaurant-frontend-deployment.yaml
+              - Service: restaurant-frontend-service.yaml
+              - Pods: restaurant-frontend-pods.yaml
+              - Replicas: $(kubectl get deployment restaurant-frontend -n cnpm-food-delivery -o jsonpath='{.spec.replicas}')
+              - Image: $(kubectl get deployment restaurant-frontend -n cnpm-food-delivery -o jsonpath='{.spec.template.spec.containers[0].image}')
+              
+              ### NGINX Gateway (Port 80)
+              - Deployment: nginx-gateway-deployment.yaml
+              - Service: nginx-gateway-service.yaml (LoadBalancer)
+              - ConfigMap: nginx-configmap.yaml
+              - Pods: nginx-gateway-pods.yaml
+              - Replicas: $(kubectl get deployment nginx-gateway -n cnpm-food-delivery -o jsonpath='{.spec.replicas}')
+              - External IP: $(kubectl get service nginx-gateway -n cnpm-food-delivery -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+              
+              ## Pod Status
+              \`\`\`
+              $(kubectl get pods -l 'app in (client-frontend,admin-frontend,restaurant-frontend,nginx-gateway)' -n cnpm-food-delivery)
+              \`\`\`
+              
+              ## Service Status
+              \`\`\`
+              $(kubectl get svc -l 'app in (client-frontend,admin-frontend,restaurant-frontend,nginx-gateway)' -n cnpm-food-delivery)
+              \`\`\`
+              EOF
+              
+              # List all exported files
+              echo ""
+              echo "=== Export Complete ==="
+              echo "Files exported:"
+              ls -lh $EXPORT_DIR/
+              
+              echo ""
+              echo "Total files: $(ls -1 $EXPORT_DIR/ | wc -l)"
+              echo "Export location: $EXPORT_DIR"
+              
+              # Create tar archive
+              echo ""
+              echo "Creating archive..."
+              cd /exports
+              tar -czf frontends-export-$(date +%Y%m%d-%H%M%S).tar.gz $(basename $EXPORT_DIR)
+              echo "Archive created: frontends-export-$(date +%Y%m%d-%H%M%S).tar.gz"
+              
+              echo ""
+              echo "=== Job completed successfully ==="
+          volumeMounts:
+            - name: export-volume
+              mountPath: /exports
+      volumes:
+        - name: export-volume
+          persistentVolumeClaim:
+            claimName: exports-pvc

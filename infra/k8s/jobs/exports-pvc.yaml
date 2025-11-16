@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: exports-pvc
+  namespace: cnpm-food-delivery
+  labels:
+    app: exports
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard  # Change to your cluster's storage class if needed

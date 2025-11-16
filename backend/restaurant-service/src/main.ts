@@ -9,7 +9,9 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', {
+    exclude: ['/metrics'],
+  });
 
   const corsConfig = configService.get<string>('CORS_ORIGIN');
   const defaultOrigins = [
