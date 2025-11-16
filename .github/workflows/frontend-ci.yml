@@ -164,7 +164,7 @@ jobs:
   client-app:
     name: Client App CI
     runs-on: ubuntu-latest
-    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles, bundle-size-check]
+    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles]
     if: github.event.inputs.skip_tests != 'true' && always()
     defaults:
       run:
@@ -246,7 +246,7 @@ jobs:
   admin-app:
     name: Admin App CI (Next.js)
     runs-on: ubuntu-latest
-    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles, bundle-size-check]
+    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles]
     if: github.event.inputs.skip_tests != 'true' && always()
     defaults:
       run:
@@ -320,7 +320,7 @@ jobs:
   restaurant-app:
     name: Restaurant App CI
     runs-on: ubuntu-latest
-    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles, bundle-size-check]
+    needs: [code-quality, security-audit, dependency-review, code-format-check, lint-dockerfiles]
     if: github.event.inputs.skip_tests != 'true' && always()
     defaults:
       run:
@@ -402,6 +402,7 @@ jobs:
   bundle-size-check:
     name: Bundle Size Check
     runs-on: ubuntu-latest
+    needs: [restaurant-app, admin-app, client-app]
     if: github.event_name == 'pull_request'
 
     steps:
@@ -457,5 +458,133 @@ jobs:
         run: |
           echo "Bundle sizes reported above"
           echo "Consider adding bundle size comparison with main branch"
+        continue-on-error: true
+
+  # ==================== Docker Build (Optional) ====================
+  docker-build:
+    name: Docker Build & Scan
+    runs-on: ubuntu-latest
+    needs: [restaurant-app, admin-app, client-app]
+    if: ${{ always() && github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') }}
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+    strategy:
+      matrix:
+        app: [client, admin, restaurant]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: ${{ github.event_name == 'push' && env.DOCKER_USERNAME != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+        continue-on-error: true
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.DOCKER_USERNAME }}/frontend-${{ matrix.app }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=CNPM Frontend ${{ matrix.app }}
+            org.opencontainers.image.description=Frontend app for CNPM Final Project
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend/${{ matrix.app }}
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
+
+      - name: Scan Docker image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.DOCKER_USERNAME }}/frontend-${{ matrix.app }}:latest
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+
+      # Uncomment to push to Docker Hub
+      # - name: Push Docker image
+      #   if: ${{ github.event_name == 'push' && env.DOCKER_USERNAME != '' }}
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./frontend/${{ matrix.app }}
+      #     push: true
+      #     tags: ${{ steps.meta.outputs.tags }}
+      #     labels: ${{ steps.meta.outputs.labels }}
+
+  # ==================== Notifications ====================
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [bundle-size-check, docker-build]
+    if: always() && github.event_name == 'push'
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    steps:
+      - name: Prepare notification message
+        id: message
+        run: |
+          all_success=true
+          if [ "${{ needs.client-app.result }}" != "success" ] || \
+             [ "${{ needs.admin-app.result }}" != "success" ] || \
+             [ "${{ needs.restaurant-app.result }}" != "success" ]; then
+            all_success=false
+          fi
+          
+          # Check bundle-size-check and docker-build if they ran
+          if [ "${{ needs.bundle-size-check.result }}" != "success" ] && [ "${{ needs.bundle-size-check.result }}" != "skipped" ]; then
+            all_success=false
+          fi
+          
+          if [ "${{ needs.docker-build.result }}" != "success" ] && [ "${{ needs.docker-build.result }}" != "skipped" ]; then
+            all_success=false
+          fi
+          
+          if [ "$all_success" = true ]; then
+            echo "status=SUCCESS" >> $GITHUB_OUTPUT
+            echo "color=good" >> $GITHUB_OUTPUT
+          else
+            echo "status=FAILED" >> $GITHUB_OUTPUT
+            echo "color=danger" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack notification
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              text: "${{ steps.message.outputs.status }} - Frontend CI Build",
+              attachments: [{
+                color: '${{ steps.message.outputs.color }}',
+                text: `Branch: ${process.env.GITHUB_REF}\nCommit: ${process.env.GITHUB_SHA.substring(0, 7)}\nAuthor: ${process.env.GITHUB_ACTOR}`
+              }]
+            }
         continue-on-error: true
 

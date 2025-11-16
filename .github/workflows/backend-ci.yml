@@ -555,7 +555,7 @@ jobs:
   notify:
     name: Send Notifications
     runs-on: ubuntu-latest
-    needs: [auth-service, order-service, payment-service, restaurant-service]
+    needs: [docker-build, performance-check]
     if: always() && github.event_name == 'push'
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -569,6 +569,15 @@ jobs:
              [ "${{ needs.order-service.result }}" != "success" ] || \
              [ "${{ needs.payment-service.result }}" != "success" ] || \
              [ "${{ needs.restaurant-service.result }}" != "success" ]; then
+            all_success=false
+          fi
+          
+          # Check docker-build and performance-check if they ran
+          if [ "${{ needs.docker-build.result }}" != "success" ] && [ "${{ needs.docker-build.result }}" != "skipped" ]; then
+            all_success=false
+          fi
+          
+          if [ "${{ needs.performance-check.result }}" != "success" ] && [ "${{ needs.performance-check.result }}" != "skipped" ]; then
             all_success=false
           fi
           

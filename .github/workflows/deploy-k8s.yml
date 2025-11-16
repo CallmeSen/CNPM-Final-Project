@@ -1,4 +1,4 @@
-name: Kubernetes Deployment Pipeline
+name: CI/CD Pipeline - Docker Desktop K8s
 
 on:
   push:
