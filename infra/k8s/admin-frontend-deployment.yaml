@@ -36,6 +36,10 @@ spec:
               value: "http://order-service:5005"
             - name: NEXT_PUBLIC_PAYMENT_SERVICE_URL
               value: "http://payment-service:5004"
+            - name: USE_NGINX_PROXY
+              value: "true"
+            - name: NGINX_URL
+              value: "http://nginx"
           resources:
             requests:
               memory: "256Mi"
@@ -45,13 +49,13 @@ spec:
               cpu: "500m"
           livenessProbe:
             httpGet:
-              path: /admin
+              path: /
               port: 3001
             initialDelaySeconds: 30
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /admin
+              path: /
               port: 3001
             initialDelaySeconds: 10
             periodSeconds: 5

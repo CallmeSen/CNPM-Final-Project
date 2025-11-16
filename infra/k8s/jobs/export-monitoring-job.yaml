@@ -1,0 +1,219 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: export-monitoring
+  namespace: cnpm-food-delivery
+  labels:
+    app: export-monitoring
+    type: backup
+spec:
+  ttlSecondsAfterFinished: 86400  # Auto-cleanup after 24 hours
+  template:
+    metadata:
+      labels:
+        app: export-monitoring
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: export-job-sa
+      containers:
+        - name: exporter
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "=== Starting Monitoring Export Job ==="
+              echo "Timestamp: $(date)"
+              
+              # Create export directory
+              EXPORT_DIR="/exports/monitoring-$(date +%Y%m%d-%H%M%S)"
+              mkdir -p $EXPORT_DIR/{prometheus,grafana,loki,promtail}
+              
+              echo "Export directory: $EXPORT_DIR"
+              
+              # Check if monitoring namespace exists
+              if kubectl get namespace monitoring &>/dev/null; then
+                MONITORING_NS="monitoring"
+              elif kubectl get namespace cnpm-food-delivery &>/dev/null; then
+                MONITORING_NS="cnpm-food-delivery"
+                echo "Using cnpm-food-delivery namespace for monitoring resources"
+              else
+                echo "No monitoring namespace found"
+                MONITORING_NS="cnpm-food-delivery"
+              fi
+              
+              # Export Prometheus
+              echo "Exporting Prometheus..."
+              if kubectl get deployment prometheus -n $MONITORING_NS &>/dev/null; then
+                kubectl get deployment prometheus -n $MONITORING_NS -o yaml > $EXPORT_DIR/prometheus/deployment.yaml
+                kubectl get service prometheus -n $MONITORING_NS -o yaml > $EXPORT_DIR/prometheus/service.yaml 2>/dev/null || true
+                kubectl get configmap prometheus-config -n $MONITORING_NS -o yaml > $EXPORT_DIR/prometheus/configmap.yaml 2>/dev/null || true
+                kubectl get pvc prometheus-data -n $MONITORING_NS -o yaml > $EXPORT_DIR/prometheus/pvc.yaml 2>/dev/null || true
+                echo "Prometheus exported"
+              else
+                echo "Prometheus deployment not found" > $EXPORT_DIR/prometheus/NOT_DEPLOYED.txt
+              fi
+              
+              # Export Grafana
+              echo "Exporting Grafana..."
+              if kubectl get deployment grafana -n $MONITORING_NS &>/dev/null; then
+                kubectl get deployment grafana -n $MONITORING_NS -o yaml > $EXPORT_DIR/grafana/deployment.yaml
+                kubectl get service grafana -n $MONITORING_NS -o yaml > $EXPORT_DIR/grafana/service.yaml 2>/dev/null || true
+                kubectl get configmap grafana-datasources -n $MONITORING_NS -o yaml > $EXPORT_DIR/grafana/datasources-configmap.yaml 2>/dev/null || true
+                kubectl get configmap grafana-dashboards -n $MONITORING_NS -o yaml > $EXPORT_DIR/grafana/dashboards-configmap.yaml 2>/dev/null || true
+                kubectl get secret grafana-credentials -n $MONITORING_NS -o yaml > $EXPORT_DIR/grafana/secret.yaml 2>/dev/null || true
+                kubectl get pvc grafana-data -n $MONITORING_NS -o yaml > $EXPORT_DIR/grafana/pvc.yaml 2>/dev/null || true
+                echo "Grafana exported"
+              else
+                echo "Grafana deployment not found" > $EXPORT_DIR/grafana/NOT_DEPLOYED.txt
+              fi
+              
+              # Export Loki
+              echo "Exporting Loki..."
+              if kubectl get deployment loki -n $MONITORING_NS &>/dev/null; then
+                kubectl get deployment loki -n $MONITORING_NS -o yaml > $EXPORT_DIR/loki/deployment.yaml
+                kubectl get service loki -n $MONITORING_NS -o yaml > $EXPORT_DIR/loki/service.yaml 2>/dev/null || true
+                kubectl get configmap loki-config -n $MONITORING_NS -o yaml > $EXPORT_DIR/loki/configmap.yaml 2>/dev/null || true
+                kubectl get pvc loki-data -n $MONITORING_NS -o yaml > $EXPORT_DIR/loki/pvc.yaml 2>/dev/null || true
+                echo "Loki exported"
+              else
+                echo "Loki deployment not found" > $EXPORT_DIR/loki/NOT_DEPLOYED.txt
+              fi
+              
+              # Export Promtail
+              echo "Exporting Promtail..."
+              if kubectl get daemonset promtail -n $MONITORING_NS &>/dev/null; then
+                kubectl get daemonset promtail -n $MONITORING_NS -o yaml > $EXPORT_DIR/promtail/daemonset.yaml
+                kubectl get configmap promtail-config -n $MONITORING_NS -o yaml > $EXPORT_DIR/promtail/configmap.yaml 2>/dev/null || true
+                echo "Promtail exported"
+              else
+                echo "Promtail daemonset not found" > $EXPORT_DIR/promtail/NOT_DEPLOYED.txt
+              fi
+              
+              # Export ServiceMonitors if they exist
+              echo "Exporting ServiceMonitors..."
+              kubectl get servicemonitor -n $MONITORING_NS -o yaml > $EXPORT_DIR/servicemonitors.yaml 2>/dev/null || echo "No ServiceMonitors found" > $EXPORT_DIR/NO_SERVICEMONITORS.txt
+              
+              # Export PrometheusRules if they exist
+              echo "Exporting PrometheusRules..."
+              kubectl get prometheusrule -n $MONITORING_NS -o yaml > $EXPORT_DIR/prometheusrules.yaml 2>/dev/null || echo "No PrometheusRules found" > $EXPORT_DIR/NO_PROMETHEUSRULES.txt
+              
+              # Create summary file
+              echo "Creating export summary..."
+              cat > $EXPORT_DIR/README.md <<EOF
+              # Monitoring Stack Export Summary
+              
+              **Export Date**: $(date)
+              **Namespace**: $MONITORING_NS
+              
+              ## Exported Resources
+              
+              ### Prometheus
+              \`\`\`
+              $(kubectl get deployment,service,configmap,pvc -l app=prometheus -n $MONITORING_NS 2>/dev/null || echo "Not deployed")
+              \`\`\`
+              
+              ### Grafana
+              \`\`\`
+              $(kubectl get deployment,service,configmap,pvc,secret -l app=grafana -n $MONITORING_NS 2>/dev/null || echo "Not deployed")
+              \`\`\`
+              
+              ### Loki
+              \`\`\`
+              $(kubectl get deployment,service,configmap,pvc -l app=loki -n $MONITORING_NS 2>/dev/null || echo "Not deployed")
+              \`\`\`
+              
+              ### Promtail
+              \`\`\`
+              $(kubectl get daemonset,configmap -l app=promtail -n $MONITORING_NS 2>/dev/null || echo "Not deployed")
+              \`\`\`
+              
+              ## Configuration Files
+              
+              The following configuration files have been exported:
+              - Prometheus: prometheus/configmap.yaml
+              - Grafana Datasources: grafana/datasources-configmap.yaml
+              - Grafana Dashboards: grafana/dashboards-configmap.yaml
+              - Loki Config: loki/configmap.yaml
+              - Promtail Config: promtail/configmap.yaml
+              
+              ## Persistent Volumes
+              
+              \`\`\`
+              $(kubectl get pvc -l 'app in (prometheus,grafana,loki)' -n $MONITORING_NS 2>/dev/null || echo "No PVCs found")
+              \`\`\`
+              
+              ## ServiceMonitors & AlertRules
+              
+              ServiceMonitors and PrometheusRules are exported in separate files if they exist.
+              
+              ## Restore Instructions
+              
+              To restore the monitoring stack:
+              
+              1. Apply PVCs first:
+                 \`\`\`
+                 kubectl apply -f prometheus/pvc.yaml
+                 kubectl apply -f grafana/pvc.yaml
+                 kubectl apply -f loki/pvc.yaml
+                 \`\`\`
+              
+              2. Apply ConfigMaps and Secrets:
+                 \`\`\`
+                 kubectl apply -f prometheus/configmap.yaml
+                 kubectl apply -f grafana/datasources-configmap.yaml
+                 kubectl apply -f grafana/dashboards-configmap.yaml
+                 kubectl apply -f grafana/secret.yaml
+                 kubectl apply -f loki/configmap.yaml
+                 kubectl apply -f promtail/configmap.yaml
+                 \`\`\`
+              
+              3. Apply Deployments:
+                 \`\`\`
+                 kubectl apply -f prometheus/deployment.yaml
+                 kubectl apply -f grafana/deployment.yaml
+                 kubectl apply -f loki/deployment.yaml
+                 kubectl apply -f promtail/daemonset.yaml
+                 \`\`\`
+              
+              4. Apply Services:
+                 \`\`\`
+                 kubectl apply -f prometheus/service.yaml
+                 kubectl apply -f grafana/service.yaml
+                 kubectl apply -f loki/service.yaml
+                 \`\`\`
+              
+              5. Apply ServiceMonitors and Rules (if applicable):
+                 \`\`\`
+                 kubectl apply -f servicemonitors.yaml
+                 kubectl apply -f prometheusrules.yaml
+                 \`\`\`
+              EOF
+              
+              # List all exported files
+              echo ""
+              echo "=== Export Complete ==="
+              echo "Directory structure:"
+              find $EXPORT_DIR -type f
+              
+              echo ""
+              echo "Total files: $(find $EXPORT_DIR -type f | wc -l)"
+              echo "Export location: $EXPORT_DIR"
+              
+              # Create tar archive
+              echo ""
+              echo "Creating archive..."
+              cd /exports
+              tar -czf monitoring-export-$(date +%Y%m%d-%H%M%S).tar.gz $(basename $EXPORT_DIR)
+              echo "Archive created: monitoring-export-$(date +%Y%m%d-%H%M%S).tar.gz"
+              
+              echo ""
+              echo "=== Job completed successfully ==="
+          volumeMounts:
+            - name: export-volume
+              mountPath: /exports
+      volumes:
+        - name: export-volume
+          persistentVolumeClaim:
+            claimName: exports-pvc

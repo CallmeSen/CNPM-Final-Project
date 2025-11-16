@@ -36,6 +36,8 @@ spec:
                   key: JWT_SECRET
             - name: AUTH_SERVICE_URL
               value: "http://auth-service:5001"
+            - name: ORDER_SERVICE_URL
+              value: "http://order-service:5005"
           volumeMounts:
             - name: restaurant-uploads
               mountPath: /app/uploads

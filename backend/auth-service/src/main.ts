@@ -25,7 +25,9 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', {
+    exclude: ['/metrics'],
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
