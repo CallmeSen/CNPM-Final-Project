@@ -31,7 +31,7 @@ import { join } from 'path';
       defaultMetrics: {
         enabled: true,
       },
-      path: '/metrics',
+      path: 'metrics',
     }),
     OrdersModule,
     UsersModule,

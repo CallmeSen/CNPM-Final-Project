@@ -45,7 +45,7 @@ const envFilePaths = [
       defaultMetrics: {
         enabled: true,
       },
-      path: '/metrics',
+      path: 'metrics',
     }),
     RestaurantsModule,
     FoodItemsModule,
