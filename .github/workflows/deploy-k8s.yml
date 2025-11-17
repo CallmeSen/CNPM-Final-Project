@@ -3,11 +3,14 @@ name: CD Pipeline - Docker Desktop K8s
 on:
   push:
     branches:
-      - main
       - source
     paths:
       - "infra/k8s/**"
       - ".github/workflows/deploy-k8s.yml"
+  pull_request:
+    branches:
+      - main
+
   release:
     types: [published]
   workflow_dispatch:
