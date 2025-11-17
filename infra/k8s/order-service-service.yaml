@@ -3,6 +3,10 @@ kind: Service
 metadata:
   name: order-service
   namespace: cnpm-food-delivery
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "5005"
+    prometheus.io/path: "/api/metrics"
 spec:
   selector:
     app: order-service

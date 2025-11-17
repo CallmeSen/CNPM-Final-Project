@@ -28,17 +28,17 @@ export class OrdersInternalController {
     try {
       // Try to find order by orderId field first (new orders)
       let order = await this.ordersService.findByOrderId(orderId);
-      
+
       // If not found and orderId looks like MongoDB ObjectId, try finding by _id
       if (!order && orderId.match(/^[0-9a-fA-F]{24}$/)) {
         this.logger.log(`Trying to find order by _id: ${orderId}`);
         try {
           order = await this.ordersService.findOne(orderId);
-        } catch (err) {
+        } catch {
           // Ignore error, will be caught below
         }
       }
-      
+
       if (!order) {
         this.logger.error(`❌ Order ${orderId} not found`);
         throw new Error(`Order ${orderId} not found`);
@@ -54,7 +54,9 @@ export class OrdersInternalController {
       );
       return updated;
     } catch (error) {
-      this.logger.error(`❌ Failed to update order ${orderId}: ${error.message}`);
+      this.logger.error(
+        `❌ Failed to update order ${orderId}: ${error.message}`,
+      );
       throw error;
     }
   }

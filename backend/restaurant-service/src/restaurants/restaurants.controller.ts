@@ -75,7 +75,12 @@ export class RestaurantsController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     const restaurantId = this.ensureRestaurant(user);
-    return this.restaurantsService.updateProfile(restaurantId, dto, file, authHeader);
+    return this.restaurantsService.updateProfile(
+      restaurantId,
+      dto,
+      file,
+      authHeader,
+    );
   }
 
   @Put('availability')

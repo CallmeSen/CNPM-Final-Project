@@ -102,7 +102,7 @@ function DeliveryPage() {
   const fetchDeliveryPersonnel = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/management/delivery', {
+      const res = await fetch('/api/management/delivery', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       
@@ -122,7 +122,7 @@ function DeliveryPage() {
   const fetchDeliveryFees = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/management/delivery-fees', {
+      const res = await fetch('/api/management/delivery-fees', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       
@@ -138,7 +138,7 @@ function DeliveryPage() {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/management/delivery/stats', {
+      const res = await fetch('/api/management/delivery/stats', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       
@@ -207,7 +207,7 @@ function DeliveryPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/management/delivery', {
+      const res = await fetch('/api/management/delivery', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -245,7 +245,7 @@ function DeliveryPage() {
     
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5001/api/management/delivery/${selectedDelivery._id}`, {
+      const res = await fetch(`/api/management/delivery/${selectedDelivery._id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -274,7 +274,7 @@ function DeliveryPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5001/api/management/delivery/${delivery._id}`, {
+      const res = await fetch(`/api/management/delivery/${delivery._id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -295,7 +295,7 @@ function DeliveryPage() {
   const handleToggleAvailability = async (delivery) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5001/api/management/delivery/${delivery._id}/availability`, {
+      const res = await fetch(`/api/management/delivery/${delivery._id}/availability`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -343,7 +343,7 @@ function DeliveryPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5001/api/management/delivery-fees', {
+      const res = await fetch('/api/management/delivery-fees', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -372,7 +372,7 @@ function DeliveryPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5001/api/management/delivery-fees/${fee._id}`, {
+      const res = await fetch(`/api/management/delivery-fees/${fee._id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -404,7 +404,7 @@ function DeliveryPage() {
         isRushHour: feeCalculator.isRushHour
       });
 
-      const res = await fetch(`http://localhost:5001/api/management/delivery-fees/calculate?${params}`, {
+      const res = await fetch(`/api/management/delivery-fees/calculate?${params}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       
@@ -994,3 +994,4 @@ function DeliveryPage() {
 }
 
 export default DeliveryPage;
+

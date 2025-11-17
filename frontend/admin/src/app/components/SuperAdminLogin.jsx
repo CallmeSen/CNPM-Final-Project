@@ -50,7 +50,7 @@ function SuperAdminLogin() {
     }
 
     try {
-      const res = await fetch('http://localhost:5001/api/auth/login/superadmin', {
+      const res = await fetch('/api/auth/login/superadmin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

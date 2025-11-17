@@ -1,7 +1,4 @@
-import {
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersService } from './orders.service';
@@ -87,7 +84,7 @@ describe('OrdersService', () => {
           totalPrice: 20,
         }),
       );
-      const createdDoc = (orderModel.mock.results[0].value as any);
+      const createdDoc = orderModel.mock.results[0].value as any;
       expect(createdDoc.save).toHaveBeenCalled();
       expect(result.totalPrice).toBe(20);
     });
@@ -213,11 +210,10 @@ describe('OrdersService', () => {
       });
 
       await expect(
-        service.updateDetails(
-          'order-id',
-          { deliveryAddress: 'Nope' } as any,
-          { id: 'customer-1', role: 'customer' },
-        ),
+        service.updateDetails('order-id', { deliveryAddress: 'Nope' } as any, {
+          id: 'customer-1',
+          role: 'customer',
+        }),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
@@ -283,9 +279,9 @@ describe('OrdersService', () => {
       await expect(
         service.updateStatus(
           'order-id',
-        { status: OrderStatus.Preparing } as any,
-        { id: 'restaurant-1', role: 'restaurant' },
-      ),
+          { status: OrderStatus.Preparing } as any,
+          { id: 'restaurant-1', role: 'restaurant' },
+        ),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });

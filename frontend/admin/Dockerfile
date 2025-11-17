@@ -23,12 +23,24 @@ ARG AUTH_SERVICE_URL=http://localhost:5001
 ARG RESTAURANT_SERVICE_URL=http://localhost:5002
 ARG ORDER_SERVICE_URL=http://localhost:5005
 ARG PAYMENT_SERVICE_URL=http://localhost:5004
+ARG USE_API_PROXY=true
+ARG USE_NGINX_PROXY=true
+ARG NGINX_URL=http://nginx
 
-# Set as environment variables for next.config.ts
+# Set as environment variables for next.config.ts (used during build)
 ENV AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
 ENV RESTAURANT_SERVICE_URL=${RESTAURANT_SERVICE_URL}
 ENV ORDER_SERVICE_URL=${ORDER_SERVICE_URL}
 ENV PAYMENT_SERVICE_URL=${PAYMENT_SERVICE_URL}
+ENV USE_NGINX_PROXY=${USE_NGINX_PROXY}
+ENV NGINX_URL=${NGINX_URL}
+ENV NEXT_PUBLIC_AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
+ENV NEXT_PUBLIC_RESTAURANT_SERVICE_URL=${RESTAURANT_SERVICE_URL}
+ENV NEXT_PUBLIC_ORDER_SERVICE_URL=${ORDER_SERVICE_URL}
+ENV NEXT_PUBLIC_PAYMENT_SERVICE_URL=${PAYMENT_SERVICE_URL}
+ENV NEXT_PUBLIC_USE_API_PROXY=${USE_API_PROXY}
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
@@ -36,11 +48,7 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy all files
 COPY . .
 
-# Set environment variable for production build
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
-
-# Build Next.js application
+# Build Next.js application (rewrites will use the ARG values)
 RUN npm run build
 
 # Production stage
@@ -56,14 +64,19 @@ ENV PORT=3001
 RUN groupadd --gid 1001 nodejs && \
     useradd --uid 1001 --gid nodejs --shell /bin/bash --create-home nextjs
 
+# Copy node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
 # Copy necessary files
 COPY --from=builder /app/next.config.ts ./
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
 
-# Copy built files
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Copy built files (full .next directory for rewrites support)
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+
+# Copy source files needed for Next.js server
+COPY --from=builder /app/src ./src
 
 # Switch to non-root user
 USER nextjs
@@ -75,6 +88,6 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3001', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
 
-# Start Next.js application
-CMD ["node", "server.js"]
+# Start Next.js application with full server
+CMD ["npx", "next", "start", "-p", "3001"]
 

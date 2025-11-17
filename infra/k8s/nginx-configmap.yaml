@@ -52,9 +52,9 @@ data:
                 proxy_cache_bypass $http_upgrade;
             }
 
-            # Admin Frontend  
+            # Admin Frontend - Keep /admin prefix (basePath)
             location /admin/ {
-                proxy_pass http://admin-frontend/;
+                proxy_pass http://admin-frontend;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection 'upgrade';
@@ -66,9 +66,9 @@ data:
                 return 301 /admin/;
             }
 
-            # Restaurant Frontend
+            # Restaurant Frontend - Keep /restaurant prefix (basePath)
             location /restaurant/ {
-                proxy_pass http://restaurant-frontend/;
+                proxy_pass http://restaurant-frontend;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection 'upgrade';
@@ -81,31 +81,134 @@ data:
             }
 
             # Backend APIs
-            location /api/auth {
+            location /api/auth/ {
                 proxy_pass http://auth-service;
                 proxy_http_version 1.1;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # CORS headers
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+
+                if ($request_method = 'OPTIONS') {
+                    return 204;
+                }
             }
 
-            location /api/restaurant {
+            location /api/management/ {
+                proxy_pass http://auth-service;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # CORS headers
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+
+                if ($request_method = 'OPTIONS') {
+                    return 204;
+                }
+            }
+
+            location /api/restaurant/ {
                 proxy_pass http://restaurant-service;
                 proxy_http_version 1.1;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # CORS headers
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+
+                if ($request_method = 'OPTIONS') {
+                    return 204;
+                }
             }
 
-            location /api/payment {
+            location ~* /api/superadmin/ {
+                rewrite ^/api/superadmin/(.*)$ /api/superAdmin/$1 break;
+                proxy_pass http://restaurant-service;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # CORS headers
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+
+                if ($request_method = 'OPTIONS') {
+                    return 204;
+                }
+            }
+
+            location ~ ^/api/food-items(/.*)?$ {
+                proxy_pass http://restaurant-service;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # CORS headers
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+
+                if ($request_method = 'OPTIONS') {
+                    return 204;
+                }
+            }
+
+            location /api/reports/ {
+                proxy_pass http://restaurant-service;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # CORS headers
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+
+                if ($request_method = 'OPTIONS') {
+                    return 204;
+                }
+            }
+
+            location /api/payment/ {
                 proxy_pass http://payment-service;
                 proxy_http_version 1.1;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-for $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # CORS headers
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+
+                if ($request_method = 'OPTIONS') {
+                    return 204;
+                }
             }
 
-            location /api/orders {
+            location /api/orders/ {
                 proxy_pass http://order-service;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
@@ -113,12 +216,29 @@ data:
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
                 proxy_cache_bypass $http_upgrade;
+
+                # CORS headers
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+
+                if ($request_method = 'OPTIONS') {
+                    return 204;
+                }
             }
 
-            # Static files (uploads)
-            location /uploads {
+            # Static files - Profile pictures go to auth-service
+            location ~ ^/uploads/profilePicture-.*$ {
                 proxy_pass http://auth-service;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+            }
+
+            # All other uploads go to restaurant-service
+            location /uploads/ {
+                proxy_pass http://restaurant-service;
                 proxy_http_version 1.1;
                 proxy_set_header Host $host;
             }
