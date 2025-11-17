@@ -62,13 +62,8 @@ jobs:
       # 4️⃣ Deploy to Docker Desktop Kubernetes
       - name: Prepare Namespace and Base Resources
         run: |
-          # Delete and recreate namespace to ensure a clean state
-          kubectl delete namespace cnpm-food-delivery --ignore-not-found=true
-          Start-Sleep -Seconds 10
-
           # Apply base resources
           kubectl apply -f infra/k8s/namespace.yaml
-          kubectl apply -f infra/k8s/secrets.yaml
           kubectl apply -f infra/k8s/pvcs.yaml
 
       - name: Deploy MongoDB Services
@@ -200,7 +195,6 @@ jobs:
         run: |
           kubectl apply -f infra/k8s/jobs/
           start-sleep -Seconds 10
-          kubectl status jobs -n cnpm-food-delivery
           echo "Jobs and CronJobs deployment completed!"
       # 6️⃣ Verify deployment !
       - name: Verify Deployment
