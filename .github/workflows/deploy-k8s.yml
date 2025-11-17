@@ -52,57 +52,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 2️⃣ Build & push Backend Services
-      - name: Build and Push Auth Service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend/auth-service
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/auth-service:latest
-
-      - name: Build and Push Restaurant Service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend/restaurant-service
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/restaurant-service:latest
-
-      - name: Build and Push Order Service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend/order-service
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/order-service:latest
-
-      - name: Build and Push Payment Service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend/payment-service
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/payment-service:latest
-
-      # 2️⃣ Build & push Frontend Apps
-      - name: Build and Push Client Frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend/client
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/client-frontend:latest
-
-      - name: Build and Push Admin Frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend/admin
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/admin-frontend:latest
-
-      - name: Build and Push Restaurant Frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend/restaurant
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/restaurant-frontend:latest
-
       # 3️⃣ Verify Docker Desktop Kubernetes
       - name: Check Kubernetes context
         run: |
@@ -113,8 +62,9 @@ jobs:
       # 4️⃣ Deploy to Docker Desktop Kubernetes
       - name: Prepare Namespace and Base Resources
         run: |
-          # Create namespace if not exists
-          kubectl create namespace cnpm-food-delivery --dry-run=client -o yaml | kubectl apply -f -
+          # Delete and recreate namespace to ensure a clean state
+          kubectl delete namespace cnpm-food-delivery --ignore-not-found=true
+          Start-Sleep -Seconds 10
 
           # Apply base resources
           kubectl apply -f infra/k8s/namespace.yaml
@@ -123,14 +73,6 @@ jobs:
 
       - name: Deploy MongoDB Services
         run: |
-          # Clean up existing MongoDB if exists
-          kubectl delete -f infra/k8s/auth-service-mongo.yaml --ignore-not-found=true
-          kubectl delete -f infra/k8s/restaurant-service-mongo.yaml --ignore-not-found=true
-          kubectl delete -f infra/k8s/order-service-mongo.yaml --ignore-not-found=true
-          kubectl delete -f infra/k8s/payment-service-mongo.yaml --ignore-not-found=true
-
-          Start-Sleep -Seconds 10
-
           # Deploy MongoDB instances
           kubectl apply -f infra/k8s/auth-service-mongo.yaml
           kubectl apply -f infra/k8s/restaurant-service-mongo.yaml
@@ -138,7 +80,7 @@ jobs:
           kubectl apply -f infra/k8s/payment-service-mongo.yaml
 
           echo "Waiting for MongoDB StatefulSets to be ready (may take 2-3 minutes)..."
-          Start-Sleep -Seconds 30
+          Start-Sleep -Seconds 20
 
           # Wait for StatefulSets (not pods directly)
           kubectl rollout status statefulset/mongodb-auth -n cnpm-food-delivery --timeout=5m
@@ -158,13 +100,6 @@ jobs:
 
       - name: Deploy Backend Microservices
         run: |
-          # Clean up existing services first
-          kubectl delete -f infra/k8s/auth-service-deployment.yaml --ignore-not-found=true
-          kubectl delete -f infra/k8s/restaurant-service-deployment.yaml --ignore-not-found=true
-          kubectl delete -f infra/k8s/order-service-deployment.yaml --ignore-not-found=true
-          kubectl delete -f infra/k8s/payment-service-deployment.yaml --ignore-not-found=true
-
-          echo "Waiting for old services to be cleaned up..."
           Start-Sleep -Seconds 10
 
           # Deploy new backend services
@@ -179,12 +114,6 @@ jobs:
 
       - name: Deploy Frontend Apps
         run: |
-          # Clean up existing frontends
-          kubectl delete -f infra/k8s/client-frontend-deployment.yaml --ignore-not-found=true
-          kubectl delete -f infra/k8s/admin-frontend-deployment.yaml --ignore-not-found=true
-          kubectl delete -f infra/k8s/restaurant-frontend-deployment.yaml --ignore-not-found=true
-
-          echo "Waiting for old frontends to be cleaned up..."
           Start-Sleep -Seconds 10
 
           # Deploy new frontends
@@ -232,17 +161,18 @@ jobs:
           echo "Deployment rollout completed!"
         continue-on-error: true
 
-      # 5️⃣ Deploy Monitoring Stack (Optional)
+      # 5️⃣ Deploy Monitoring Stack
       - name: Deploy Monitoring Stack
         run: |
+          # Delete existing monitoring stack if exists
+          kubectl delete namespace monitoring --ignore-not-found=true
+          Start-Sleep -Seconds 10
+
           echo "Deploying Prometheus, Grafana, and Loki..."
+          kubectl apply -f infra/k8s/monitoring/namespace.yaml
 
           # Deploy Prometheus
           kubectl apply -f infra/k8s/monitoring/prometheus.yaml
-
-          # Deploy Grafana Dashboards ConfigMaps
-          echo "Deploying Grafana dashboards..."
-          kubectl apply -f infra/k8s/monitoring/grafana-dashboards.yaml
 
           # Deploy Grafana
           kubectl apply -f infra/k8s/monitoring/grafana.yaml
@@ -265,6 +195,13 @@ jobs:
           echo "Monitoring stack deployed!"
         continue-on-error: true
 
+      # 5️⃣ Deploy jobs, cronjobs if any
+      - name: Deploy Jobs and CronJobs
+        run: |
+          kubectl apply -f infra/k8s/jobs/
+          start-sleep -Seconds 10
+          kubectl status jobs -n cnpm-food-delivery
+          echo "Jobs and CronJobs deployment completed!"
       # 6️⃣ Verify deployment !
       - name: Verify Deployment
         run: |
@@ -277,12 +214,3 @@ jobs:
           echo "=== All Deployments ==="
           kubectl get deployments -n cnpm-food-delivery
           echo ""
-          echo "=== Access URLs ==="
-          echo "Application: kubectl port-forward -n cnpm-food-delivery svc/nginx-gateway 8080:80"
-          echo "  Then: http://localhost:8080"
-          echo ""
-          echo "Grafana: kubectl port-forward -n cnpm-food-delivery svc/grafana 3000:3000"
-          echo "  Then: http://localhost:3000 (admin/admin123)"
-          echo ""
-          echo "Prometheus: kubectl port-forward -n cnpm-food-delivery svc/prometheus 9090:9090"
-          echo "  Then: http://localhost:9090"
