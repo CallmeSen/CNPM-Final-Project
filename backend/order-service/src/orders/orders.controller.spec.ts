@@ -107,7 +107,11 @@ describe('OrdersController', () => {
   });
 
   it('returns order when customer owns it', async () => {
-    const order = { id: 'order-1', customerId: 'customer-1', restaurantId: 'restaurant-1' };
+    const order = {
+      id: 'order-1',
+      customerId: 'customer-1',
+      restaurantId: 'restaurant-1',
+    };
     service.findOne.mockResolvedValue(order);
 
     const result = await controller.findOne('order-1', {
@@ -120,7 +124,11 @@ describe('OrdersController', () => {
   });
 
   it('throws ForbiddenException when customer does not own order', async () => {
-    const order = { id: 'order-1', customerId: 'other', restaurantId: 'restaurant-1' };
+    const order = {
+      id: 'order-1',
+      customerId: 'other',
+      restaurantId: 'restaurant-1',
+    };
     service.findOne.mockResolvedValue(order);
 
     await expect(
@@ -129,7 +137,11 @@ describe('OrdersController', () => {
   });
 
   it('throws ForbiddenException when restaurant does not own order', async () => {
-    const order = { id: 'order-1', customerId: 'customer-1', restaurantId: 'another' };
+    const order = {
+      id: 'order-1',
+      customerId: 'customer-1',
+      restaurantId: 'another',
+    };
     service.findOne.mockResolvedValue(order);
 
     await expect(
