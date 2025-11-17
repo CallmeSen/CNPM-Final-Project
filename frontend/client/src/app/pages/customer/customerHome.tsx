@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { FaArrowRight, FaSearch, FaUtensils } from "react-icons/fa";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
-import { buildRestaurantServiceUrl } from "../../../config/api";
+import { buildRestaurantServiceUrl, buildAuthServiceUrl } from "../../../config/api";
 import styles from "../../styles/customerHome.module.css";
 
 export type Restaurant = {
@@ -29,7 +29,10 @@ type RawRestaurant = Partial<
   }
 >;
 
-const FALLBACK_IMAGE = "https://via.placeholder.com/320x200?text=Restaurant";
+// Alternative placeholder services (uncomment one if you prefer external):
+const FALLBACK_IMAGE = 'https://placehold.co/320x200?text=Restaurant';
+// const FALLBACK_IMAGE = 'https://dummyimage.com/320x200/e5e7eb/9ca3af&text=Restaurant';
+// const FALLBACK_IMAGE = 'https://fakeimg.pl/320x200/e5e7eb/9ca3af/?text=Restaurant';
 
 const normaliseRestaurant = (restaurant: RawRestaurant): Restaurant | null => {
   if (!restaurant) {
@@ -264,7 +267,7 @@ const CustomerHome = () => {
                   <img
                     src={
                       restaurant.profilePicture && restaurant.profilePicture.trim()
-                        ? `http://localhost:5001${restaurant.profilePicture}`
+                        ? buildAuthServiceUrl(restaurant.profilePicture)
                         : FALLBACK_IMAGE
                     }
                     alt={restaurant.name}
@@ -305,3 +308,4 @@ const CustomerHome = () => {
 };
 
 export default CustomerHome;
+

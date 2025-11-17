@@ -39,4 +39,5 @@ export class AuthRestaurant {
 
 export type AuthRestaurantDocument = AuthRestaurant & Document;
 
-export const AuthRestaurantSchema = SchemaFactory.createForClass(AuthRestaurant);
+export const AuthRestaurantSchema =
+  SchemaFactory.createForClass(AuthRestaurant);

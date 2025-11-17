@@ -32,7 +32,8 @@ interface OrderFromService {
 
 @Injectable()
 export class ReportsService {
-  private readonly ORDER_SERVICE_URL = process.env.ORDER_SERVICE_URL || 'http://localhost:5005';
+  private readonly ORDER_SERVICE_URL =
+    process.env.ORDER_SERVICE_URL || 'http://localhost:5005';
 
   constructor(
     @InjectModel(Review.name) private readonly reviewModel: Model<Review>,
@@ -92,11 +93,12 @@ export class ReportsService {
 
       const orders = response.data;
 
-      // Filter and aggregate locally
+      // Filter and aggregate locally - only count delivered orders
       const filteredOrders = orders.filter(
         (order) =>
           order.restaurantId === restaurantId &&
           order.paymentStatus === 'Paid' &&
+          order.status === 'Delivered' &&
           new Date(order.createdAt) >= start &&
           new Date(order.createdAt) <= end,
       );
@@ -148,20 +150,18 @@ export class ReportsService {
 
       const orders = response.data;
 
-      // Filter paid orders within date range
+      // Filter paid and delivered orders within date range
       const filteredOrders = orders.filter(
         (order) =>
           order.restaurantId === restaurantId &&
           order.paymentStatus === 'Paid' &&
+          order.status === 'Delivered' &&
           new Date(order.createdAt) >= start &&
           new Date(order.createdAt) <= end,
       );
 
       // Aggregate items
-      const itemsMap = new Map<
-        string,
-        { quantity: number; revenue: number }
-      >();
+      const itemsMap = new Map<string, { quantity: number; revenue: number }>();
 
       filteredOrders.forEach((order) => {
         order.items.forEach((item) => {
@@ -249,11 +249,12 @@ export class ReportsService {
 
       const orders = response.data;
 
-      // Filter and calculate order stats
+      // Filter and calculate order stats - only count delivered orders
       const filteredOrders = orders.filter(
         (order) =>
           order.restaurantId === restaurantId &&
           order.paymentStatus === 'Paid' &&
+          order.status === 'Delivered' &&
           new Date(order.createdAt) >= start &&
           new Date(order.createdAt) <= end,
       );

@@ -58,7 +58,7 @@ function SuperAdminRegister() {
     setMessage('');
 
     try {
-      const res = await fetch('http://localhost:5001/api/auth/register/superadmin', {
+      const res = await fetch('/api/auth/register/superadmin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

@@ -154,7 +154,7 @@ jobs:
         continue-on-error: true
 
       - name: Run tests
-        run: npm test -- --passWithNoTests --ci --coverage --maxWorkers=2 --verbose
+        run: npm run test:unit -- --passWithNoTests --ci --coverage --maxWorkers=2 --verbose
         env:
           NODE_ENV: test
         timeout-minutes: 10
@@ -237,7 +237,7 @@ jobs:
         continue-on-error: true
 
       - name: Run tests
-        run: npm test -- --passWithNoTests --ci --coverage --maxWorkers=2 --verbose
+        run: npm run test:unit -- --passWithNoTests --ci --coverage --maxWorkers=2 --verbose
         env:
           NODE_ENV: test
         timeout-minutes: 10

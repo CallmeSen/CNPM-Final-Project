@@ -52,12 +52,12 @@ function SuperAdminDashboard() {
       const token = localStorage.getItem('token');
 
       // Fetch all orders
-      const ordersRes = await fetch('http://localhost:5005/api/orders', {
+      const ordersRes = await fetch('/api/orders', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       
       // Fetch all restaurants
-      const restaurantsRes = await fetch('http://localhost:5002/api/superadmin/restaurants', {
+      const restaurantsRes = await fetch('/api/superadmin/restaurants', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
@@ -299,4 +299,5 @@ function SuperAdminDashboard() {
 }
 
 export default SuperAdminDashboard;
+
 

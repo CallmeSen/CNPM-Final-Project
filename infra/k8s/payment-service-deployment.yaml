@@ -64,6 +64,8 @@ spec:
                 secretKeyRef:
                   name: cnpm-secrets
                   key: RESEND_API_KEY
+            - name: ORDER_SERVICE_URL
+              value: "http://order-service:5005"
           resources:
             requests:
               memory: "256Mi"

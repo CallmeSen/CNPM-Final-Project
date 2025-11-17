@@ -34,6 +34,10 @@ spec:
               value: "http://restaurant-service:5002"
             - name: NEXT_PUBLIC_ORDER_SERVICE_URL
               value: "http://order-service:5005"
+            - name: USE_NGINX_PROXY
+              value: "true"
+            - name: NGINX_URL
+              value: "http://nginx"
           resources:
             requests:
               memory: "256Mi"

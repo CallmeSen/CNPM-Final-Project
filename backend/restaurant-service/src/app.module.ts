@@ -19,7 +19,7 @@ const envFilePaths = [
   join(process.cwd(), '..', '.env'),
   join(process.cwd(), '..', '..', '.env'),
 ].filter((envPath) => existsSync(envPath));
- 
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -30,8 +30,7 @@ const envFilePaths = [
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        uri:
-          configService.get<string>('MONGO_REST_URL'),
+        uri: configService.get<string>('MONGO_REST_URL'),
       }),
     }),
     JwtModule.registerAsync({
@@ -45,7 +44,7 @@ const envFilePaths = [
       defaultMetrics: {
         enabled: true,
       },
-      path: '/metrics',
+      path: 'metrics',
     }),
     RestaurantsModule,
     FoodItemsModule,

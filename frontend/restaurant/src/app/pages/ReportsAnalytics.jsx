@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 // @ts-nocheck
 
 import React, {
@@ -39,7 +39,7 @@ function ReportsAnalytics() {
   const fetchRestaurantProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/restaurant/profile', {
+      const res = await fetch('/api/restaurant/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -72,16 +72,16 @@ function ReportsAnalytics() {
 
       const [revenueRes, topItemsRes, reviewsRes, summaryRes] =
         await Promise.all([
-          fetch(`http://localhost:5002/api/reports/revenue${queryParams}`, {
+          fetch(`/api/reports/revenue${queryParams}`, {
             headers,
           }),
-          fetch(`http://localhost:5002/api/reports/top-items${queryParams}`, {
+          fetch(`/api/reports/top-items${queryParams}`, {
             headers,
           }),
-          fetch(`http://localhost:5002/api/reports/reviews?limit=5`, {
+          fetch(`/api/reports/reviews?limit=5`, {
             headers,
           }),
-          fetch(`http://localhost:5002/api/reports/summary${queryParams}`, {
+          fetch(`/api/reports/summary${queryParams}`, {
             headers,
           }),
         ]);
@@ -142,7 +142,7 @@ function ReportsAnalytics() {
         label: 'Total Orders',
         value: summary.totalOrders ?? 0,
         tone: 'indigo',
-        icon: '🧾',
+        icon: '📦',
         helper: 'Completed transactions',
       },
       {
@@ -150,7 +150,7 @@ function ReportsAnalytics() {
         label: 'Avg Order Value',
         value: currencyFormatter.format(summary.averageOrderValue ?? 0),
         tone: 'green',
-        icon: '📈',
+        icon: '💵',
         helper: 'Average revenue per order',
       },
       {
@@ -444,7 +444,7 @@ function ReportsAnalytics() {
                         </div>
                       </div>
                       <div className="review-rating">
-                        {'⭐'.repeat(review.rating).padEnd(5, '☆')}
+                        {'?'.repeat(review.rating).padEnd(5, '?')}
                       </div>
                     </div>
                     <div className="review-content">
@@ -469,6 +469,7 @@ function ReportsAnalytics() {
 }
 
 export default ReportsAnalytics;
+
 
 
 

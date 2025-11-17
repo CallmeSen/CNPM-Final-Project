@@ -1,7 +1,5 @@
 # Grafana Dashboards for Kubernetes
 
-Tất cả các dashboard Grafana được tự động load vào Grafana khi deploy lên Kubernetes.
-
 ## 📊 Available Dashboards
 
 ### 1. **Backend Services Overview** (`backend-overview.json`)

@@ -38,6 +38,10 @@ spec:
               value: "http://payment-service:5004"
             - name: NEXT_PUBLIC_DELIVERY_SERVICE_URL
               value: "http://delivery-service:5003"
+            - name: USE_NGINX_PROXY
+              value: "true"
+            - name: NGINX_URL
+              value: "http://nginx"
           resources:
             requests:
               memory: "256Mi"

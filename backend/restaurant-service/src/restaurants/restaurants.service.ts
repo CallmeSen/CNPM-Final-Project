@@ -37,7 +37,9 @@ export class RestaurantsService {
     private readonly restaurantModel: Model<RestaurantDocument>,
     private readonly configService: ConfigService,
   ) {
-    this.authServiceUrl = this.configService.get<string>('AUTH_SERVICE_URL') || 'http://localhost:5001';
+    this.authServiceUrl =
+      this.configService.get<string>('AUTH_SERVICE_URL') ||
+      'http://localhost:5001';
   }
 
   private sanitizeRestaurant(
@@ -71,23 +73,27 @@ export class RestaurantsService {
   // login() -> auth-service: loginRestaurant()
 
   // Helper method to fetch restaurant profile from auth-service
-  private async fetchRestaurantFromAuthService(restaurantId: string): Promise<any> {
+  private async fetchRestaurantFromAuthService(
+    restaurantId: string,
+  ): Promise<any> {
     try {
       const response = await axios.get(
-        `${this.authServiceUrl}/api/auth/restaurant/profile/${restaurantId}`
+        `${this.authServiceUrl}/api/auth/restaurant/profile/${restaurantId}`,
       );
       return response.data.data.restaurant;
     } catch (error) {
       if (error.response?.status === 404) {
         throw new NotFoundException('Restaurant not found');
       }
-      throw new BadRequestException('Failed to fetch restaurant profile from auth service');
+      throw new BadRequestException(
+        'Failed to fetch restaurant profile from auth service',
+      );
     }
   }
 
   async getProfile(restaurantId: string): Promise<SanitizedRestaurant> {
     const restaurant = await this.fetchRestaurantFromAuthService(restaurantId);
-    
+
     return {
       id: restaurant.id,
       name: restaurant.name,
@@ -110,13 +116,14 @@ export class RestaurantsService {
   ): Promise<{ message: string; restaurant: SanitizedRestaurant }> {
     try {
       const formData = new FormData();
-      
+
       // Add text fields
       if (dto.name) formData.append('name', dto.name);
       if (dto.ownerName) formData.append('ownerName', dto.ownerName);
       if (dto.location) formData.append('location', dto.location);
-      if (dto.contactNumber) formData.append('contactNumber', dto.contactNumber);
-      
+      if (dto.contactNumber)
+        formData.append('contactNumber', dto.contactNumber);
+
       // Add file if provided
       if (file) {
         formData.append('profilePicture', file.buffer, {
@@ -141,7 +148,7 @@ export class RestaurantsService {
       );
 
       const restaurant = response.data.data.restaurant;
-      
+
       return {
         message: response.data.message,
         restaurant: {
@@ -165,8 +172,11 @@ export class RestaurantsService {
         data: error.response?.data,
         message: error.message,
       });
-      
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to update restaurant profile';
+
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to update restaurant profile';
       throw new BadRequestException(errorMessage);
     }
   }
@@ -176,16 +186,18 @@ export class RestaurantsService {
     dto: UpdateAvailabilityDto,
   ): Promise<{ message: string; availability: boolean }> {
     // TODO: Implement update API in auth-service
-    throw new BadRequestException('Update availability feature will be available soon. Please contact auth-service admin.');
+    throw new BadRequestException(
+      'Update availability feature will be available soon. Please contact auth-service admin.',
+    );
   }
 
   async getPublicRestaurants(): Promise<SanitizedRestaurant[]> {
     try {
       const response = await axios.get(
-        `${this.authServiceUrl}/api/auth/restaurants/available`
+        `${this.authServiceUrl}/api/auth/restaurants/available`,
       );
       const restaurants = response.data.data.restaurants;
-      
+
       return restaurants.map((r: any) => ({
         id: r.id,
         name: r.name,
@@ -197,17 +209,19 @@ export class RestaurantsService {
         admin: { email: '' },
       }));
     } catch (error) {
-      throw new BadRequestException('Failed to fetch available restaurants from auth service');
+      throw new BadRequestException(
+        'Failed to fetch available restaurants from auth service',
+      );
     }
   }
 
   async getAllRestaurants(): Promise<SanitizedRestaurant[]> {
     try {
       const response = await axios.get(
-        `${this.authServiceUrl}/api/auth/restaurants`
+        `${this.authServiceUrl}/api/auth/restaurants`,
       );
       const restaurants = response.data.data.restaurants;
-      
+
       return restaurants.map((r: any) => ({
         id: r.id,
         name: r.name,
@@ -219,7 +233,9 @@ export class RestaurantsService {
         admin: { email: '' },
       }));
     } catch (error) {
-      throw new BadRequestException('Failed to fetch all restaurants from auth service');
+      throw new BadRequestException(
+        'Failed to fetch all restaurants from auth service',
+      );
     }
   }
 
@@ -229,7 +245,9 @@ export class RestaurantsService {
 
   async deleteRestaurant(id: string): Promise<{ message: string }> {
     // TODO: Implement delete API in auth-service
-    throw new BadRequestException('Delete restaurant feature will be available soon. Please contact auth-service admin.');
+    throw new BadRequestException(
+      'Delete restaurant feature will be available soon. Please contact auth-service admin.',
+    );
   }
 
   async updateRestaurant(
@@ -237,7 +255,9 @@ export class RestaurantsService {
     dto: UpdateRestaurantDto,
   ): Promise<{ message: string; restaurant: SanitizedRestaurant }> {
     // TODO: Implement update API in auth-service
-    throw new BadRequestException('Update restaurant feature will be available soon. Please contact auth-service admin.');
+    throw new BadRequestException(
+      'Update restaurant feature will be available soon. Please contact auth-service admin.',
+    );
   }
 
   async getAllForAdmin(): Promise<SanitizedRestaurant[]> {
