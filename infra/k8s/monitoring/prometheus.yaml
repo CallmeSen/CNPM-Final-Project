@@ -26,21 +26,33 @@ data:
               names:
                 - cnpm-food-delivery
         relabel_configs:
+          # Keep only services with prometheus.io/scrape annotation set to true
           - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
             action: keep
             regex: true
+          # Use custom metrics path if prometheus.io/path annotation is set
           - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
             action: replace
             target_label: __metrics_path__
             regex: (.+)
+          # Use custom port if prometheus.io/port annotation is set
           - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
             action: replace
-            regex: ([^:]+)(?:\d+)?;(\d+)
+            regex: ([^:]+)(?::\d+)?;(\d+)
             replacement: $1:$2
             target_label: __address__
+          # Add service name as label
           - source_labels: [__meta_kubernetes_service_name]
             action: replace
             target_label: service
+          # Add namespace as label
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          # Add pod name as label
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
 ---
 # ServiceAccount for Prometheus
 apiVersion: v1

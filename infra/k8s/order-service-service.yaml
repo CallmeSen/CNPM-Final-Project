@@ -6,7 +6,7 @@ metadata:
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/port: "5005"
-    prometheus.io/path: "/api/metrics"
+    prometheus.io/path: "/metrics"
 spec:
   selector:
     app: order-service
