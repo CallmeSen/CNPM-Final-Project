@@ -22,20 +22,24 @@ export class FoodItemsService {
     private foodItemModel: Model<FoodItemDocument>,
     private readonly configService: ConfigService,
   ) {
-    this.authServiceUrl = this.configService.get<string>('AUTH_SERVICE_URL') || 'http://localhost:5001';
+    this.authServiceUrl =
+      this.configService.get<string>('AUTH_SERVICE_URL') ||
+      'http://localhost:5001';
   }
 
   // Helper method to verify restaurant exists in auth-service
   private async verifyRestaurantExists(restaurantId: string): Promise<void> {
     try {
       await axios.get(
-        `${this.authServiceUrl}/api/auth/restaurant/profile/${restaurantId}`
+        `${this.authServiceUrl}/api/auth/restaurant/profile/${restaurantId}`,
       );
     } catch (error) {
       if (error.response?.status === 404) {
         throw new NotFoundException('Restaurant not found');
       }
-      throw new BadRequestException('Failed to verify restaurant from auth service');
+      throw new BadRequestException(
+        'Failed to verify restaurant from auth service',
+      );
     }
   }
 
@@ -46,7 +50,6 @@ export class FoodItemsService {
   ) {
     // Verify restaurant exists in auth-service
     await this.verifyRestaurantExists(restaurantId);
-
 
     const imagePath = file ? buildPublicFilePath(file.filename) : undefined;
 

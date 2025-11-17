@@ -28,7 +28,11 @@ function createImageUploadConfig(subDirectory?: string) {
         callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
       },
     }),
-    fileFilter: (_req: unknown, file: { mimetype: string }, callback: (error: Error | null, acceptFile: boolean) => void) => {
+    fileFilter: (
+      _req: unknown,
+      file: { mimetype: string },
+      callback: (error: Error | null, acceptFile: boolean) => void,
+    ) => {
       if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
         return callback(new Error('Only image files are allowed!'), false);
       }
