@@ -318,25 +318,15 @@ kubectl create secret docker-registry dockerhub-secret \
   --docker-server=https://index.docker.io/v1/ \
   --docker-username=YOUR_USERNAME \
   --docker-password=YOUR_PASSWORD \
-  --docker-email=YOUR_EMAIL
 
 # Deploy to Kubernetes
 kubectl apply -f infra/k8s/
+kubectl apply -f infra/k8s/monitoring
+kubectl apply -f infra/k8s/jobs
 
 # Check deployment status
 kubectl get pods -n cnpm-food-delivery
 kubectl get services -n cnpm-food-delivery
-```
-
-### Access Deployed Application
-```bash
-# Port forward services
-kubectl port-forward -n cnpm-food-delivery svc/nginx-gateway 8080:80
-kubectl port-forward -n cnpm-food-delivery svc/grafana 3030:3000
-
-# Access URLs
-echo "Application: http://localhost:8080"
-echo "Grafana: http://localhost:3030 (admin/admin123)"
 ```
 
 ## 📊 Monitoring & Observability
@@ -357,11 +347,8 @@ echo "Grafana: http://localhost:3030 (admin/admin123)"
 ### Access Monitoring
 ```powershell
 # Run the monitoring access script
-.\access-monitoring.ps1
+.\start-k8s-port-forward.ps1
 
-# Or manually port-forward
-kubectl port-forward -n cnpm-food-delivery svc/grafana 3030:3000
-kubectl port-forward -n cnpm-food-delivery svc/prometheus 9090:9090
 ```
 
 ## 🧪 Testing
@@ -369,7 +356,7 @@ kubectl port-forward -n cnpm-food-delivery svc/prometheus 9090:9090
 ### Unit Tests
 ```bash
 # Run tests for specific service
-cd backend/auth-service && npm test
+npm run tests:unit
 
 # Run tests with coverage
 npm run test:cov
@@ -380,17 +367,8 @@ npm run test:e2e
 
 ### Integration Tests
 ```bash
-# Test with Docker Compose
-docker-compose -f docker-compose.test.yml up --abort-on-container-exit
-```
-
-### Load Testing
-```bash
-# Install Artillery
-npm install -g artillery
-
 # Run load tests
-artillery run tests/load-test.yml
+npm run tests:intergration
 ```
 
 ## 🤝 Contributing
@@ -424,29 +402,13 @@ This project is licensed under the **GNU License** - see the [LICENSE](LICENSE) 
 
 ## 👥 Team
 
-### Core Contributors
-- **👨‍💻 [CallmeSen](https://github.com/CallmeSen)** - *Lead Developer & Architect*
-  - Backend microservices development
-  - DevOps & infrastructure setup
-  - CI/CD pipeline implementation
+- **👨‍💻 [CallmeSen](https://github.com/CallmeSen)** - *Members*
 
-- **👨‍💻 [Nguyen Huynh Phuong Loc](https://github.com/nguyenhuynhphuongloc)** - *Frontend Developer*
-  - React/Next.js application development
-  - UI/UX design and implementation
-  - User experience optimization
-
-### Project Links
-- **📊 [Project Board](https://github.com/CallmeSen/CNPM-Final-Project/projects)**
-- **🐛 [Issue Tracker](https://github.com/CallmeSen/CNPM-Final-Project/issues)**
-- **📖 [Documentation Wiki](https://github.com/CallmeSen/CNPM-Final-Project/wiki)**
+- **👨‍💻 [Nguyen Huynh Phuong Loc](https://github.com/nguyenhuynhphuongloc)** - *Members*
 
 ---
 
 <div align="center">
-
-**Made with ❤️ in Saigon, Vietnam**
-
-⭐ **Star this repository** if you found it helpful!
 
 [⬆️ Back to Top](#-fastiesaigon--food-delivery-microservices-platform)
 
