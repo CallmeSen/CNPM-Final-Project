@@ -75,4 +75,3 @@ describe('UsersController', () => {
     expect(result).toEqual(payload);
   });
 });
-
