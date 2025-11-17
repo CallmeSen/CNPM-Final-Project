@@ -32,7 +32,8 @@ interface OrderFromService {
 
 @Injectable()
 export class ReportsService {
-  private readonly ORDER_SERVICE_URL = process.env.ORDER_SERVICE_URL || 'http://localhost:5005';
+  private readonly ORDER_SERVICE_URL =
+    process.env.ORDER_SERVICE_URL || 'http://localhost:5005';
 
   constructor(
     @InjectModel(Review.name) private readonly reviewModel: Model<Review>,
@@ -160,10 +161,7 @@ export class ReportsService {
       );
 
       // Aggregate items
-      const itemsMap = new Map<
-        string,
-        { quantity: number; revenue: number }
-      >();
+      const itemsMap = new Map<string, { quantity: number; revenue: number }>();
 
       filteredOrders.forEach((order) => {
         order.items.forEach((item) => {

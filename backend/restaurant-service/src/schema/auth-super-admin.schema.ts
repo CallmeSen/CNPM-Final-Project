@@ -19,4 +19,5 @@ export class AuthSuperAdmin {
 
 export type AuthSuperAdminDocument = AuthSuperAdmin & Document;
 
-export const AuthSuperAdminSchema = SchemaFactory.createForClass(AuthSuperAdmin);
+export const AuthSuperAdminSchema =
+  SchemaFactory.createForClass(AuthSuperAdmin);

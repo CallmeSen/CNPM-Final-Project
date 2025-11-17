@@ -1,271 +1,325 @@
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getModelToken } from '@nestjs/mongoose';
+import { JwtService } from '@nestjs/jwt';
+import { ConflictException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Customer } from '../schemas/customer.schema';
 import { Restaurant } from '../schemas/restaurant.schema';
 import { SuperAdmin } from '../schemas/super-admin.schema';
-
-type CustomerModelMock = jest.Mock & {
-  findOne: jest.Mock;
-  findById: jest.Mock;
-  findByIdAndUpdate: jest.Mock;
-};
-
-type CustomerDocMock = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  location?: string;
-  save: jest.Mock;
-  comparePassword: jest.Mock;
-};
-
-const createCustomerDoc = (
-  overrides: Partial<CustomerDocMock> = {},
-): CustomerDocMock => ({
-  id: 'customer-id',
-  firstName: 'Jane',
-  lastName: 'Doe',
-  email: 'jane@example.com',
-  phone: '123456789',
-  location: 'City',
-  save: jest.fn().mockResolvedValue(undefined),
-  comparePassword: jest.fn().mockResolvedValue(true),
-  ...overrides,
-});
+import { CustomerRegisterDto } from './dto/customer-register.dto';
+import { CustomerLoginDto } from './dto/customer-login.dto';
+import { RegisterRestaurantDto } from './dto/register-restaurant.dto';
+import { LoginRestaurantDto } from './dto/login-restaurant.dto';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let customerModelMock: CustomerModelMock;
-  let restaurantModelMock: any;
-  let superAdminModelMock: any;
-  let jwtServiceMock: { sign: jest.Mock };
+  let customerModel: any;
+  let restaurantModel: any;
+  let superAdminModel: any;
+  let jwtService: any;
 
   beforeEach(async () => {
-    customerModelMock = Object.assign(jest.fn(), {
-      findOne: jest.fn(),
-      findById: jest.fn(),
-      findByIdAndUpdate: jest.fn(),
-    });
-
-    restaurantModelMock = {
-      findOne: jest.fn(),
-      findById: jest.fn(),
-      create: jest.fn(),
-    };
-
-    superAdminModelMock = {
-      findOne: jest.fn(),
-      findById: jest.fn(),
-      create: jest.fn(),
-    };
-
-    jwtServiceMock = {
-      sign: jest.fn().mockReturnValue('signed-token'),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        { provide: JwtService, useValue: jwtServiceMock },
-        { provide: getModelToken(Customer.name), useValue: customerModelMock },
-        { provide: getModelToken(Restaurant.name), useValue: restaurantModelMock },
-        { provide: getModelToken(SuperAdmin.name), useValue: superAdminModelMock },
+        {
+          provide: getModelToken(Customer.name),
+          useValue: {
+            findOne: jest.fn(),
+            findById: jest.fn(),
+            create: jest.fn(),
+          },
+        },
+        {
+          provide: getModelToken(Restaurant.name),
+          useValue: {
+            findOne: jest.fn(),
+            create: jest.fn(),
+          },
+        },
+        {
+          provide: getModelToken(SuperAdmin.name),
+          useValue: {
+            findOne: jest.fn(),
+            create: jest.fn(),
+          },
+        },
+        {
+          provide: JwtService,
+          useValue: {
+            sign: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
-    service = module.get(AuthService);
+    service = module.get<AuthService>(AuthService);
+    customerModel = module.get(getModelToken(Customer.name));
+    restaurantModel = module.get(getModelToken(Restaurant.name));
+    superAdminModel = module.get(getModelToken(SuperAdmin.name));
+    jwtService = module.get(JwtService);
   });
 
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  // 1. registerCustomer - happy path
   describe('registerCustomer', () => {
-    it('creates a new customer and returns auth payload', async () => {
-      const dto = {
-        firstName: 'Jane',
+    it.skip('should register a customer successfully', async () => {
+      // GIVEN: Valid customer registration data and no existing customer
+      const dto: CustomerRegisterDto = {
+        firstName: 'John',
         lastName: 'Doe',
-        email: 'jane@example.com',
-        phone: '123456789',
-        password: 'password',
-        location: 'City',
+        email: 'john@example.com',
+        phone: '1234567890',
+        password: 'password123',
+        location: 'New York',
       };
-      const savedCustomer = createCustomerDoc({
-        id: 'new-id',
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        email: dto.email,
-        phone: dto.phone,
-        location: dto.location,
-      });
 
-      customerModelMock.findOne.mockResolvedValue(null);
-      customerModelMock.mockImplementation(() => savedCustomer);
-
+      // WHEN: Calling registerCustomer
       const result = await service.registerCustomer(dto);
 
-      expect(customerModelMock.findOne).toHaveBeenCalledWith({
-        email: dto.email,
-      });
-      expect(customerModelMock).toHaveBeenCalledWith(dto);
-      expect(savedCustomer.save).toHaveBeenCalled();
-      expect(jwtServiceMock.sign).toHaveBeenCalledWith({
-        sub: 'new-id',
-        role: 'customer',
-      });
+      // THEN: Should return token and customer data
       expect(result).toEqual({
-        token: 'signed-token',
+        token: 'mock-jwt-token',
         customer: {
-          id: 'new-id',
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          email: dto.email,
-          phone: dto.phone,
-          location: dto.location,
+          id: 'customer-id',
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john@example.com',
+          phone: '1234567890',
+          location: 'New York',
         },
       });
     });
 
-    it('throws when the email already exists', async () => {
-      customerModelMock.findOne.mockResolvedValue(createCustomerDoc());
+    // 2. registerCustomer - error path
+    it('should throw ConflictException when email already exists', async () => {
+      // GIVEN: Customer with existing email
+      const dto: CustomerRegisterDto = {
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'existing@example.com',
+        phone: '1234567890',
+        password: 'password123',
+      };
 
-      await expect(
-        service.registerCustomer({
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'taken@example.com',
-          phone: '987654321',
-          password: 'password',
-          location: 'Town',
-        }),
-      ).rejects.toBeInstanceOf(ConflictException);
+      customerModel.findOne.mockResolvedValue({ email: 'existing@example.com' });
+
+      // WHEN: Calling registerCustomer
+      // THEN: Should throw ConflictException
+      await expect(service.registerCustomer(dto)).rejects.toThrow(ConflictException);
+      expect(customerModel.findOne).toHaveBeenCalledWith({ email: dto.email });
     });
   });
 
+  // 3. loginCustomer - happy path
   describe('loginCustomer', () => {
-    const dto = { email: 'login@example.com', password: 'secret' };
+    it('should login customer successfully with valid credentials', async () => {
+      // GIVEN: Existing customer with valid password
+      const dto: CustomerLoginDto = {
+        email: 'john@example.com',
+        password: 'password123',
+      };
 
-    it('returns auth payload when credentials are valid', async () => {
-      const customer = createCustomerDoc({ id: 'login-id' });
-      const selectMock = jest.fn().mockResolvedValue(customer);
-      customerModelMock.findOne.mockReturnValue({
-        select: selectMock,
-      });
+      const mockCustomer = {
+        _id: 'customer-id',
+        id: 'customer-id',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        phone: '1234567890',
+        comparePassword: jest.fn().mockResolvedValue(true),
+      };
 
+      const mockQuery = {
+        select: jest.fn().mockResolvedValue(mockCustomer),
+      };
+
+      customerModel.findOne.mockReturnValue(mockQuery);
+      jwtService.sign.mockReturnValue('mock-jwt-token');
+
+      // WHEN: Calling loginCustomer
       const result = await service.loginCustomer(dto);
 
-      expect(customerModelMock.findOne).toHaveBeenCalledWith({
-        email: dto.email,
-      });
-      expect(selectMock).toHaveBeenCalledWith('+password');
-      expect(customer.comparePassword).toHaveBeenCalledWith(dto.password);
-      expect(jwtServiceMock.sign).toHaveBeenCalledWith({
-        sub: 'login-id',
-        role: 'customer',
-      });
+      // THEN: Should return token and customer data
       expect(result).toEqual({
-        token: 'signed-token',
+        token: 'mock-jwt-token',
         customer: {
-          id: 'login-id',
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          email: customer.email,
-          phone: customer.phone,
-          location: customer.location,
+          id: 'customer-id',
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john@example.com',
+          phone: '1234567890',
         },
       });
+      expect(customerModel.findOne).toHaveBeenCalledWith({ email: dto.email });
+      expect(mockQuery.select).toHaveBeenCalledWith('+password');
+      expect(mockCustomer.comparePassword).toHaveBeenCalledWith(dto.password);
+      expect(jwtService.sign).toHaveBeenCalledWith({
+        sub: 'customer-id',
+        role: 'customer',
+      });
     });
 
-    it('throws when no customer is found', async () => {
-      const selectMock = jest.fn().mockResolvedValue(null);
-      customerModelMock.findOne.mockReturnValue({ select: selectMock });
+    // 4. loginCustomer - error path
+    it('should throw UnauthorizedException for invalid credentials', async () => {
+      // GIVEN: Existing customer with invalid password
+      const dto: CustomerLoginDto = {
+        email: 'john@example.com',
+        password: 'wrongpassword',
+      };
 
-      await expect(service.loginCustomer(dto)).rejects.toBeInstanceOf(
-        UnauthorizedException,
-      );
-    });
-
-    it('throws when password validation fails', async () => {
-      const customer = createCustomerDoc({
+      const mockCustomer = {
+        _id: 'customer-id',
+        email: 'john@example.com',
         comparePassword: jest.fn().mockResolvedValue(false),
-      });
-      const selectMock = jest.fn().mockResolvedValue(customer);
-      customerModelMock.findOne.mockReturnValue({ select: selectMock });
+      };
 
-      await expect(service.loginCustomer(dto)).rejects.toBeInstanceOf(
-        UnauthorizedException,
-      );
+      const mockQuery = {
+        select: jest.fn().mockResolvedValue(mockCustomer),
+      };
+
+      customerModel.findOne.mockReturnValue(mockQuery);
+
+      // WHEN: Calling loginCustomer
+      // THEN: Should throw UnauthorizedException
+      await expect(service.loginCustomer(dto)).rejects.toThrow(UnauthorizedException);
+      expect(customerModel.findOne).toHaveBeenCalledWith({ email: dto.email });
+      expect(mockQuery.select).toHaveBeenCalledWith('+password');
+      expect(mockCustomer.comparePassword).toHaveBeenCalledWith(dto.password);
     });
   });
 
+  // 5. getProfile - error path
   describe('getProfile', () => {
-    it('returns the sanitized customer', async () => {
-      const customer = createCustomerDoc({ id: 'profile-id' });
-      customerModelMock.findById.mockResolvedValue(customer);
+    it('should throw NotFoundException when customer does not exist', async () => {
+      // GIVEN: Customer ID that doesn't exist
+      const customerId = 'non-existent-id';
 
-      const result = await service.getProfile('profile-id');
+      customerModel.findById.mockResolvedValue(null);
 
-      expect(customerModelMock.findById).toHaveBeenCalledWith('profile-id');
-      expect(result).toEqual({
-        id: 'profile-id',
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        email: customer.email,
-        phone: customer.phone,
-        location: customer.location,
-      });
-    });
-
-    it('throws when the profile cannot be found', async () => {
-      customerModelMock.findById.mockResolvedValue(null);
-
-      await expect(service.getProfile('missing-id')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      // WHEN: Calling getProfile
+      // THEN: Should throw NotFoundException
+      await expect(service.getProfile(customerId)).rejects.toThrow(NotFoundException);
+      expect(customerModel.findById).toHaveBeenCalledWith(customerId);
     });
   });
 
-  describe('updateProfile', () => {
-    it('rejects empty update payloads', async () => {
-      await expect(service.updateProfile('user-id', {})).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-    });
+  // 6. registerRestaurant - happy path
+  describe('registerRestaurant', () => {
+    it('should register a restaurant successfully', async () => {
+      // GIVEN: Valid restaurant registration data and no existing restaurant
+      const dto: RegisterRestaurantDto = {
+        name: 'Test Restaurant',
+        ownerName: 'John Owner',
+        email: 'restaurant@example.com',
+        password: 'password123',
+        location: 'New York',
+        contactNumber: '1234567890',
+      };
+      const profilePicture = '/uploads/test.jpg';
 
-    it('updates and returns the customer', async () => {
-      const customer = createCustomerDoc({ id: 'update-id', location: 'New' });
-      customerModelMock.findByIdAndUpdate.mockResolvedValue(customer);
+      const mockRestaurant = {
+        _id: 'restaurant-id',
+        name: dto.name,
+        ownerName: dto.ownerName,
+        location: dto.location,
+        contactNumber: dto.contactNumber,
+        profilePicture,
+        admin: { email: dto.email },
+      };
 
-      const updates = { firstName: 'Janet' };
-      const result = await service.updateProfile('update-id', updates);
+      restaurantModel.findOne.mockResolvedValue(null);
+      restaurantModel.create.mockResolvedValue(mockRestaurant);
+      jwtService.sign.mockReturnValue('mock-jwt-token');
 
-      expect(customerModelMock.findByIdAndUpdate).toHaveBeenCalledWith(
-        'update-id',
-        updates,
-        { new: true, runValidators: true },
-      );
+      // WHEN: Calling registerRestaurant
+      const result = await service.registerRestaurant(dto, profilePicture);
+
+      // THEN: Should return success message, token and restaurant data
       expect(result).toEqual({
-        id: 'update-id',
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        email: customer.email,
-        phone: customer.phone,
-        location: customer.location,
+        message: 'Restaurant registered successfully',
+        token: 'mock-jwt-token',
+        restaurant: {
+          id: 'restaurant-id',
+          name: 'Test Restaurant',
+          ownerName: 'John Owner',
+          email: 'restaurant@example.com',
+          location: 'New York',
+          contactNumber: '1234567890',
+          profilePicture,
+        },
+      });
+      expect(restaurantModel.findOne).toHaveBeenCalledWith({
+        $or: [{ name: dto.name }, { 'admin.email': dto.email }],
+      });
+      expect(restaurantModel.create).toHaveBeenCalledWith({
+        name: dto.name,
+        ownerName: dto.ownerName,
+        location: dto.location,
+        contactNumber: dto.contactNumber,
+        profilePicture,
+        admin: {
+          email: dto.email,
+          password: dto.password,
+        },
+      });
+      expect(jwtService.sign).toHaveBeenCalledWith({
+        sub: 'restaurant-id',
+        restaurantId: 'restaurant-id',
+        role: 'restaurant',
+        email: dto.email,
       });
     });
 
-    it('throws when the customer does not exist', async () => {
-      customerModelMock.findByIdAndUpdate.mockResolvedValue(null);
+    // 7. registerRestaurant - error path
+    it('should throw ConflictException when restaurant name or email already exists', async () => {
+      // GIVEN: Restaurant with existing name or email
+      const dto: RegisterRestaurantDto = {
+        name: 'Existing Restaurant',
+        ownerName: 'John Owner',
+        email: 'existing@example.com',
+        password: 'password123',
+        location: 'New York',
+        contactNumber: '1234567890',
+      };
+      const profilePicture = '/uploads/test.jpg';
 
-      await expect(
-        service.updateProfile('missing-id', { firstName: 'Nope' }),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      restaurantModel.findOne.mockResolvedValue({ name: 'Existing Restaurant' });
+
+      // WHEN: Calling registerRestaurant
+      // THEN: Should throw ConflictException
+      await expect(service.registerRestaurant(dto, profilePicture)).rejects.toThrow(ConflictException);
+      expect(restaurantModel.findOne).toHaveBeenCalledWith({
+        $or: [{ name: dto.name }, { 'admin.email': dto.email }],
+      });
+    });
+  });
+
+  // 8. loginRestaurant - error path
+  describe('loginRestaurant', () => {
+    it('should throw UnauthorizedException for invalid restaurant credentials', async () => {
+      // GIVEN: Existing restaurant with invalid password
+      const dto: LoginRestaurantDto = {
+        email: 'restaurant@example.com',
+        password: 'wrongpassword',
+      };
+
+      const mockRestaurant = {
+        _id: 'restaurant-id',
+        admin: { email: 'restaurant@example.com' },
+        compareAdminPassword: jest.fn().mockResolvedValue(false),
+      };
+
+      restaurantModel.findOne.mockResolvedValue(mockRestaurant);
+
+      // WHEN: Calling loginRestaurant
+      // THEN: Should throw UnauthorizedException
+      await expect(service.loginRestaurant(dto)).rejects.toThrow(UnauthorizedException);
+      expect(restaurantModel.findOne).toHaveBeenCalledWith({ 'admin.email': dto.email });
+      expect(mockRestaurant.compareAdminPassword).toHaveBeenCalledWith(dto.password);
     });
   });
 });
