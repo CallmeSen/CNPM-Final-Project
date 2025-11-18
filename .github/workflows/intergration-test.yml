@@ -1,0 +1,89 @@
+name: Intergration Test
+
+on:
+  workflow_run:
+    workflows:
+      - frontend-ci
+      - backend-ci
+    types:
+      - completed
+
+jobs:
+  intergration-test:
+    name: Integration Test
+    runs-on: self-hosted
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Run integration tests (self-hosted)
+        shell: pwsh
+        run: |
+          Write-Host "== Integration test runner started on self-hosted runner =="
+
+          # Ensure Docker is available
+          docker version --format '{{.Server.Version}}'
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Docker daemon not reachable. Ensure Docker Desktop is running on the runner." -ForegroundColor Red
+            exit 1
+          }
+
+          # If docker-compose file exists, bring up the stack (adjust as needed)
+          if (Test-Path 'docker-compose.yml') {
+            Write-Host "Found docker-compose.yml — bringing up stack..."
+            docker compose up --build -d
+            Start-Sleep -Seconds 10
+          }
+
+          # Example: run per-service integration tests. Adjust commands to your repo's test commands.
+          $failed = $false
+
+          if (Test-Path 'backend/auth-service/package.json') {
+            Write-Host "Running auth-service integration tests..."
+            Push-Location backend/auth-service
+            npm ci
+            # replace the test command below with your real integration test script if different
+            npm test -- --runInBand --detectOpenHandles
+            if ($LASTEXITCODE -ne 0) { $failed = $true }
+            Pop-Location
+          }
+
+          # Add additional services here if you want (order, payment, restaurant)
+          # Example for order-service:
+          if (Test-Path 'backend/order-service/package.json') {
+            Write-Host "Running order-service integration tests..."
+            Push-Location backend/order-service
+            npm ci
+            npm test -- --runInBand --detectOpenHandles
+            if ($LASTEXITCODE -ne 0) { $failed = $true }
+            Pop-Location
+          }
+
+          # Tear down compose stack (optional)
+          if (Test-Path 'docker-compose.yml') {
+            Write-Host "Tearing down docker-compose stack..."
+            docker compose down
+          }
+
+          if ($failed) {
+            Write-Host "One or more integration test suites failed." -ForegroundColor Red
+            exit 1
+          }
+
+          Write-Host "Integration tests completed successfully." -ForegroundColor Green

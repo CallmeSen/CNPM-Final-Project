@@ -4,9 +4,9 @@ metadata:
   name: restaurant-frontend
   namespace: cnpm-food-delivery
   annotations:
-    prometheus.io/scrape: "true"
+    prometheus.io/scrape: "false"
     prometheus.io/port: "3002"
-    prometheus.io/path: "/api/metrics"
+    prometheus.io/path: "/metrics"
 spec:
   selector:
     app: restaurant-frontend

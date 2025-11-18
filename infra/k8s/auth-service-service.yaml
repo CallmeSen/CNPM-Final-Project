@@ -6,7 +6,7 @@ metadata:
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/port: "5001"
-    prometheus.io/path: "/api/metrics"
+    prometheus.io/path: "/metrics"
 spec:
   selector:
     app: auth-service
