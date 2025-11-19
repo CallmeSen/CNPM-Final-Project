@@ -1,20 +1,196 @@
-
-#ansible-playbook playbook_configuration_ec2.yml -i hosts 
-
 ---
-- name: Let's copy our executable script to remote location, execute script and get result back.
+- name: Configure Kubernetes control-plane node
   hosts: master
-  #remote_user: ubuntu
-  remote_user: ec2-user
+  become: true
+  gather_facts: true
+
+  vars:
+    kubernetes_version_channel: v1.30
+    kubernetes_pod_network_cidr: 10.244.0.0/16
+    kubernetes_apply_flannel: true
+    kubernetes_install_ingress: true
+    kubernetes_allow_workloads_on_master: false
+    kubernetes_admin_user: "{{ ansible_user | default('ubuntu') }}"
+    kubernetes_admin_home: "/home/{{ kubernetes_admin_user }}"
+    kubernetes_repo_key: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version_channel }}/deb/Release.key"
+    kubernetes_repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.asc] https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version_channel }}/deb/ /"
 
   tasks:
-     - name: Transfer executable script script
-       #copy: src=./configuration_script_master.sh dest=/home/ubuntu/ mode=0777   
-       copy: src=./configuration_script_master_eks.sh dest=/home/ec2-user mode=0777   
-       
-     - name: Execute the script
-       #command: sh /home/ubuntu/configuration_script_master.sh 
-       command: sh cd ~
-       command: sh /home/ec2-user/configuration_script_master_eks.sh 
+    - name: Install base packages
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - containerd
+          - curl
+          - docker.io
+          - gnupg
+        state: present
+        update_cache: true
 
+    - name: Load Kubernetes kernel modules on boot
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/k8s.conf
+        mode: "0644"
+        content: |
+          overlay
+          br_netfilter
 
+    - name: Load Kubernetes kernel modules now
+      ansible.builtin.command: "modprobe {{ item }}"
+      changed_when: false
+      loop:
+        - overlay
+        - br_netfilter
+
+    - name: Configure Kubernetes sysctl values
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/k8s.conf
+        mode: "0644"
+        content: |
+          net.bridge.bridge-nf-call-iptables = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.ipv4.ip_forward = 1
+
+    - name: Apply sysctl values
+      ansible.builtin.command: sysctl --system
+      changed_when: false
+
+    - name: Configure Docker cgroup driver
+      ansible.builtin.copy:
+        dest: /etc/docker/daemon.json
+        mode: "0644"
+        content: |
+          {
+            "exec-opts": ["native.cgroupdriver=systemd"]
+          }
+      notify: Restart Docker
+
+    - name: Enable Docker and containerd
+      ansible.builtin.service:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop:
+        - docker
+        - containerd
+
+    - name: Generate default containerd config
+      ansible.builtin.command: containerd config default
+      register: containerd_default_config
+      changed_when: false
+
+    - name: Configure containerd for systemd cgroups
+      ansible.builtin.copy:
+        dest: /etc/containerd/config.toml
+        mode: "0644"
+        content: "{{ containerd_default_config.stdout | regex_replace('SystemdCgroup = false', 'SystemdCgroup = true') }}\n"
+      notify: Restart containerd
+
+    - name: Create APT keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Kubernetes APT key
+      ansible.builtin.get_url:
+        url: "{{ kubernetes_repo_key }}"
+        dest: /etc/apt/keyrings/kubernetes-apt-keyring.asc
+        mode: "0644"
+
+    - name: Add Kubernetes APT repository
+      ansible.builtin.apt_repository:
+        repo: "{{ kubernetes_repo }}"
+        filename: kubernetes
+        state: present
+
+    - name: Install Kubernetes packages
+      ansible.builtin.apt:
+        name:
+          - kubeadm
+          - kubectl
+          - kubelet
+        state: present
+        update_cache: true
+
+    - name: Hold Kubernetes package versions
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - kubeadm
+        - kubectl
+        - kubelet
+
+    - name: Enable kubelet
+      ansible.builtin.service:
+        name: kubelet
+        enabled: true
+
+    - name: Check whether Kubernetes is already initialized
+      ansible.builtin.stat:
+        path: /etc/kubernetes/admin.conf
+      register: kubeadm_admin_conf
+
+    - name: Initialize Kubernetes control plane
+      ansible.builtin.command: "kubeadm init --pod-network-cidr={{ kubernetes_pod_network_cidr }}"
+      args:
+        creates: /etc/kubernetes/admin.conf
+      when: not kubeadm_admin_conf.stat.exists
+
+    - name: Create kubeconfig directory for admin user
+      ansible.builtin.file:
+        path: "{{ kubernetes_admin_home }}/.kube"
+        state: directory
+        owner: "{{ kubernetes_admin_user }}"
+        group: "{{ kubernetes_admin_user }}"
+        mode: "0755"
+
+    - name: Copy kubeconfig for admin user
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: "{{ kubernetes_admin_home }}/.kube/config"
+        remote_src: true
+        owner: "{{ kubernetes_admin_user }}"
+        group: "{{ kubernetes_admin_user }}"
+        mode: "0600"
+
+    - name: Install Flannel pod network
+      ansible.builtin.command: kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+      register: flannel_apply
+      changed_when: "'created' in flannel_apply.stdout or 'configured' in flannel_apply.stdout"
+      when: kubernetes_apply_flannel | bool
+
+    - name: Allow workloads on control-plane node when requested
+      ansible.builtin.command: kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/control-plane-
+      register: taint_result
+      changed_when: "'untainted' in taint_result.stdout"
+      failed_when: false
+      when: kubernetes_allow_workloads_on_master | bool
+
+    - name: Install ingress-nginx controller
+      ansible.builtin.command: kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.2/deploy/static/provider/cloud/deploy.yaml
+      register: ingress_apply
+      changed_when: "'created' in ingress_apply.stdout or 'configured' in ingress_apply.stdout"
+      when: kubernetes_install_ingress | bool
+
+    - name: Generate worker join command
+      ansible.builtin.command: kubeadm token create --print-join-command
+      register: kubeadm_join_command_result
+      changed_when: false
+
+    - name: Show worker join command
+      ansible.builtin.debug:
+        msg: "Run worker playbook with -e \"kubeadm_join_command='{{ kubeadm_join_command_result.stdout }}'\""
+
+  handlers:
+    - name: Restart Docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
+
+    - name: Restart containerd
+      ansible.builtin.service:
+        name: containerd
+        state: restarted

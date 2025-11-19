@@ -1,0 +1,4 @@
+ansible/*.md text eol=lf
+ansible/*.sh text eol=lf
+ansible/*.yml text eol=lf
+ansible/hosts text eol=lf

@@ -1,13 +1,24 @@
-
-#ansible-playbook playbook_configuration_ec2.yml -i hosts 
-
 ---
-- name: Let's copy our executable script to remote location, execute script and get result back.
-  hosts: all
-  remote_user: ec2-user
+- name: Configure Prometheus, node_exporter, and Grafana
+  hosts: monitoring
+  become: true
+  gather_facts: true
+
+  vars:
+    prometheus_version: 2.52.0
+    node_exporter_version: 1.8.1
+    install_grafana: true
+
   tasks:
-     - name: Transfer executable script script
-       copy: src=./configuration_monitoring.sh dest=/home/ec2-user/ mode=0777      
- 
-     - name: Execute the script
-       command: sh /home/ec2-user/configuration_monitoring.sh 
+    - name: Upload monitoring installer
+      ansible.builtin.copy:
+        src: ./configuration_monitoring.sh
+        dest: /tmp/configuration_monitoring.sh
+        mode: "0755"
+
+    - name: Run monitoring installer
+      ansible.builtin.command: /tmp/configuration_monitoring.sh
+      environment:
+        PROMETHEUS_VERSION: "{{ prometheus_version }}"
+        NODE_EXPORTER_VERSION: "{{ node_exporter_version }}"
+        INSTALL_GRAFANA: "{{ install_grafana | ternary('true', 'false') }}"

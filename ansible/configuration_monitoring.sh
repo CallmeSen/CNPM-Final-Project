@@ -1,151 +1,106 @@
-wget https://github.com/prometheus/prometheus/releases/download/v2.34.0-rc.1/prometheus-2.34.0-rc.1.linux-amd64.tar.gz
+#!/usr/bin/env bash
+set -euo pipefail
 
-tar -xvf prometheus-2.34.0-rc.1.linux-amd64.tar.gz 
+if [[ "${EUID}" -ne 0 ]]; then
+  exec sudo -E bash "$0" "$@"
+fi
 
-cd prometheus-2.34.0-rc.1.linux-amd64/
+export DEBIAN_FRONTEND=noninteractive
 
-# ./prometheus 
+PROMETHEUS_VERSION="${PROMETHEUS_VERSION:-2.52.0}"
+NODE_EXPORTER_VERSION="${NODE_EXPORTER_VERSION:-1.8.1}"
+INSTALL_GRAFANA="${INSTALL_GRAFANA:-true}"
+ARCH="linux-amd64"
 
-sudo cp -r . /usr/local/bin/prometheus
-#---------
+apt-get update
+apt-get install -y ca-certificates curl gnupg tar
 
-echo "INSTALL PROMETHOUES"
+id prometheus >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin prometheus
+id node_exporter >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin node_exporter
 
-sudo cat<<EOF | sudo tee /etc/systemd/system/prometheus.service
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "${tmp_dir}"' EXIT
 
+curl -fsSL \
+  "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.${ARCH}.tar.gz" \
+  -o "${tmp_dir}/prometheus.tar.gz"
+tar -xzf "${tmp_dir}/prometheus.tar.gz" -C "${tmp_dir}"
+
+install -m 0755 "${tmp_dir}/prometheus-${PROMETHEUS_VERSION}.${ARCH}/prometheus" /usr/local/bin/prometheus
+install -m 0755 "${tmp_dir}/prometheus-${PROMETHEUS_VERSION}.${ARCH}/promtool" /usr/local/bin/promtool
+install -d -o prometheus -g prometheus /etc/prometheus /var/lib/prometheus
+cp -R "${tmp_dir}/prometheus-${PROMETHEUS_VERSION}.${ARCH}/consoles" /etc/prometheus/
+cp -R "${tmp_dir}/prometheus-${PROMETHEUS_VERSION}.${ARCH}/console_libraries" /etc/prometheus/
+chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus
+
+cat >/etc/prometheus/prometheus.yml <<'EOF'
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
+  - job_name: node-exporter
+    static_configs:
+      - targets:
+          - localhost:9100
+EOF
+chown prometheus:prometheus /etc/prometheus/prometheus.yml
+
+cat >/etc/systemd/system/prometheus.service <<'EOF'
 [Unit]
-Description=Promethus Service
-After=network.target
+Description=Prometheus
+After=network-online.target
+Wants=network-online.target
 
 [Service]
+User=prometheus
+Group=prometheus
 Type=simple
-ExecStart=/usr/local/bin/prometheus/prometheus --config.file=/usr/local/bin/prometheus/prometheus.yml
+ExecStart=/usr/local/bin/prometheus \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --storage.tsdb.path=/var/lib/prometheus \
+  --web.console.templates=/etc/prometheus/consoles \
+  --web.console.libraries=/etc/prometheus/console_libraries
 
 [Install]
 WantedBy=multi-user.target
-
 EOF
 
-#----------------
+curl -fsSL \
+  "https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.${ARCH}.tar.gz" \
+  -o "${tmp_dir}/node_exporter.tar.gz"
+tar -xzf "${tmp_dir}/node_exporter.tar.gz" -C "${tmp_dir}"
+install -m 0755 "${tmp_dir}/node_exporter-${NODE_EXPORTER_VERSION}.${ARCH}/node_exporter" /usr/local/bin/node_exporter
 
-
-sudo systemctl daemon-reload
-sudo service prometheus restart
-#sudo service prometheus status
-#PROMETHOES PORT 9090
-
-
-wget https://github.com/prometheus/node_exporter/releases/download/v1.3.1/node_exporter-1.3.1.linux-amd64.tar.gz
-
-tar xzf node_exporter-1.3.1.linux-amd64.tar.gz 
-
-sudo cp node_exporter-1.3.1.linux-amd64/node_exporter  /usr/local/bin/
-
-ls /usr/local/bin/
-
-
-sudo cat<<EOF | sudo tee /etc/systemd/system/node-exporter.service
-
+cat >/etc/systemd/system/node_exporter.service <<'EOF'
 [Unit]
-Description= NodeExporter Service
-After=network.target
+Description=Prometheus Node Exporter
+After=network-online.target
+Wants=network-online.target
 
 [Service]
+User=node_exporter
+Group=node_exporter
 Type=simple
 ExecStart=/usr/local/bin/node_exporter
 
 [Install]
 WantedBy=multi-user.target
-
 EOF
 
+systemctl daemon-reload
+systemctl enable --now prometheus node_exporter
 
-sudo systemctl daemon-reload  
-
-sudo service node-exporter start
-
-#sudo service node-exporter status
-
-
-#------------------
-
-sudo service prometheus stop
-
-sudo cat<<EOF | sudo tee /usr/local/bin/prometheus/prometheus.yml 
-# my global config
-global:
-  scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
-  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
-  # scrape_timeout is set to the global default (10s).
-
-# Alertmanager configuration
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets:
-          # - alertmanager:9093
-
-# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
-rule_files:
-  # - "first_rules.yml"
-  # - "second_rules.yml"
-
-# A scrape configuration containing exactly one endpoint to scrape:
-# Here it's Prometheus itself.
-
-scrape_configs:
-  - job_name: prometheus
-    honor_labels: true
-    honor_timestamps: true
-    scheme: http
-    scrape_interval: 60s
-    scrape_timeout: 55s
-    metrics_path: /metrics
-    static_configs:
-    - targets: ['localhost:9090']
-  - job_name: node-exporter
-    honor_labels: true
-    honor_timestamps: true
-    scheme: http
-    scrape_interval: 60s
-    scrape_timeout: 55s
-    metrics_path: /metrics
-    static_configs:
-    - targets: ['localhost:9100']
-   
-EOF
-
-
-
-sudo service prometheus start
-#sudo service prometheus status
-
-
-
-
-# sudo apt-get install -y apt-transport-https
-# sudo apt-get install -y software-properties-common wget
-
-sudo yum install -y apt-transport-https
-sudo apt-get install -y software-properties-common wget
-wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
-
-
-echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
-
-echo "deb https://packages.grafana.com/oss/deb beta main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
-
-sudo apt-get update
-sudo apt-get install grafana -y 
-
-sudo systemctl daemon-reload
-sudo systemctl start grafana-server
-#sudo systemctl status grafana-server
-
-sudo systemctl enable grafana-server.service
-
-# GRAPHANA PORT --> 3000
-# ADD DATASOURECE --> PROMETHOUES --> http://localhost:9090/
-
-#1860 ID
-
+if [[ "${INSTALL_GRAFANA}" == "true" ]]; then
+  install -d -m 0755 /etc/apt/keyrings
+  curl -fsSL https://apt.grafana.com/gpg.key | gpg --dearmor --yes -o /etc/apt/keyrings/grafana.gpg
+  chmod 0644 /etc/apt/keyrings/grafana.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" >/etc/apt/sources.list.d/grafana.list
+  apt-get update
+  apt-get install -y grafana
+  systemctl enable --now grafana-server
+fi

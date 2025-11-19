@@ -1,43 +1,47 @@
-docker login -u yashwanthjavvaji -p <docker-password-redacted>
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo 'auth'
-cd auth
-docker build --network host -t yashwanthjavvaji/auth .
-docker push yashwanthjavvaji/auth
-cd ..
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+: "${DOCKER_USERNAME:?Set DOCKER_USERNAME before running this script.}"
+: "${DOCKER_PASSWORD:?Set DOCKER_PASSWORD before running this script.}"
 
-echo 'products'
+IMAGE_NAMESPACE="${DOCKER_IMAGE_NAMESPACE:-$DOCKER_USERNAME}"
+IMAGE_TAG="${IMAGE_TAG:-latest}"
 
-cd products
-docker build --network host -t yashwanthjavvaji/products .
-docker push yashwanthjavvaji/products
-cd ..
+if [[ -n "${DOCKER_REGISTRY:-}" ]]; then
+  IMAGE_NAMESPACE="${DOCKER_REGISTRY}/${IMAGE_NAMESPACE}"
+fi
 
+services=(
+  "auth-service:backend/auth-service"
+  "order-service:backend/order-service"
+  "payment-service:backend/payment-service"
+  "restaurant-service:backend/restaurant-service"
+  "client:frontend/client"
+  "admin:frontend/admin"
+  "restaurant:frontend/restaurant"
+  "nginx:infra/nginx"
+)
 
-echo 'orders'
-cd orders
-docker build --network host -t yashwanthjavvaji/orders .
-docker push yashwanthjavvaji/orders
-cd ..
+if [[ -n "${DOCKER_REGISTRY:-}" ]]; then
+  printf '%s' "$DOCKER_PASSWORD" | docker login "$DOCKER_REGISTRY" --username "$DOCKER_USERNAME" --password-stdin
+else
+  printf '%s' "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+fi
 
+for service in "${services[@]}"; do
+  image="${service%%:*}"
+  context="${service#*:}"
+  context_path="$ROOT_DIR/$context"
 
-echo 'expiration'
-cd expiration
-docker build --network host -t yashwanthjavvaji/expiration .
-docker push yashwanthjavvaji/expiration
-cd ..
+  if [[ ! -f "$context_path/Dockerfile" ]]; then
+    echo "Missing Dockerfile for $image at $context_path" >&2
+    exit 1
+  fi
 
-
-echo 'payments'
-cd payments
-docker build --network host -t yashwanthjavvaji/payments .
-docker push yashwanthjavvaji/payments
-cd ..
-
-
-echo 'client'
-cd client
-docker build --network host -t yashwanthjavvaji/client .
-docker push yashwanthjavvaji/client
-cd ..
+  tag="${IMAGE_NAMESPACE}/${image}:${IMAGE_TAG}"
+  echo "Building $tag from $context"
+  docker build --network host -t "$tag" "$context_path"
+  docker push "$tag"
+done
