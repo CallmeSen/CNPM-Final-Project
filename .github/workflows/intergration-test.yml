@@ -41,92 +41,83 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Run integration tests (self-hosted, parallel)
-        shell: pwsh
+        shell: bash
         run: |
-          Write-Host "== Integration test runner started on self-hosted runner =="
+          echo "== Integration test runner started on self-hosted runner =="
 
           # Ensure Docker is available (optional)
-          docker version --format '{{.Server.Version}}' 2>$null
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "Docker daemon not reachable. Ensure Docker is available on the runner." -ForegroundColor Yellow
-          }
+          docker version --format '{{.Server.Version}}' 2>/dev/null || echo "Docker daemon not reachable"
 
-          $services = @(
-            @{ name = 'auth-service'; path = 'backend/auth-service' },
-            @{ name = 'restaurant-service'; path = 'backend/restaurant-service' },
-            @{ name = 'order-service'; path = 'backend/order-service' },
-            @{ name = 'payment-service'; path = 'backend/payment-service' }
+          services=(
+            "auth-service:backend/auth-service"
+            "restaurant-service:backend/restaurant-service"
+            "order-service:backend/order-service"
+            "payment-service:backend/payment-service"
           )
 
-          $processInfos = @()
-          $failed = $false
+          pids=()
+          failed=0
 
-          foreach ($svc in $services) {
-            $svcPath = $svc.path
-            $svcName = $svc.name
+          for svc in "${services[@]}"; do
+            IFS=':' read -r name path <<< "$svc"
 
-            if (-not (Test-Path $svcPath)) {
-              Write-Host "Skipping $svcName — path not found: $svcPath"
+            if [[ ! -d "$path" ]]; then
+              echo "Skipping $name — path not found: $path"
               continue
-            }
+            fi
 
-            $pkgFile = Join-Path $svcPath 'package.json'
-            if (-not (Test-Path $pkgFile)) {
-              Write-Host "Skipping $svcName — package.json not found in $svcPath"
+            if [[ ! -f "$path/package.json" ]]; then
+              echo "Skipping $name — package.json not found in $path"
               continue
-            }
+            fi
 
-            Write-Host "Preparing $svcName tests..."
+            echo "Preparing $name tests..."
 
-            # Build the command depending on presence of test:integration script
-            $pkg = Get-Content $pkgFile -Raw | ConvertFrom-Json
-            if ($pkg.scripts.'test:integration') {
-              $testCmd = 'npm run test:integration --silent'
-            } elseif ($pkg.scripts.test) {
-              $testCmd = 'npm test -- --runInBand --silent'
-            } else {
-              Write-Host "No test script found for $svcName — skipping"
+            # Detect test command
+            if grep -q '"test:integration"' "$path/package.json"; then
+              testCmd="npm run test:integration --silent"
+            elif grep -q '"test"' "$path/package.json"; then
+              testCmd="npm test -- --runInBand --silent"
+            else
+              echo "No test script found for $name — skipping"
               continue
-            }
+            fi
 
-            # Start a background process for each service test
-            $outFile = Join-Path $PWD ("${svcName}.out.log")
-            $errFile = Join-Path $PWD ("${svcName}.err.log")
-            $command = "Set-Location -Path '$svcPath'; npm ci --silent; $testCmd; exit `$LASTEXITCODE"
-            Write-Host "Starting $svcName: $command"
-            $proc = Start-Process -FilePath pwsh -ArgumentList "-NoProfile","-Command",$command -PassThru -RedirectStandardOutput $outFile -RedirectStandardError $errFile
-            $processInfos += @{ Name = $svcName; Path = $svcPath; Proc = $proc; Out = $outFile; Err = $errFile }
-          }
+            # Start background process
+            outFile="${name}.out.log"
+            errFile="${name}.err.log"
+            echo "Starting $name: cd $path && npm ci --silent && $testCmd"
+            (cd "$path" && npm ci --silent && eval "$testCmd") > "$outFile" 2> "$errFile" &
+            pids+=("$!:$name:$outFile:$errFile")
+          done
 
-          if ($processInfos.Count -eq 0) {
-            Write-Host "No integration test suites found to run." -ForegroundColor Yellow
-          } else {
-            # Wait for all processes and collect results
-            foreach ($info in $processInfos) {
-              $proc = $info.Proc
-              Write-Host "Waiting for $($info.Name) (PID $($proc.Id))..."
-              Wait-Process -Id $proc.Id
-              $proc.Refresh()
-              $exit = $proc.ExitCode
-              Write-Host "$($info.Name) exited with code $exit"
-              Write-Host "---- $($info.Name) STDOUT ----"
-              if (Test-Path $info.Out) { Get-Content $info.Out -Tail 200 } else { Write-Host "(no stdout log)" }
-              Write-Host "---- $($info.Name) STDERR ----"
-              if (Test-Path $info.Err) { Get-Content $info.Err -Tail 200 } else { Write-Host "(no stderr log)" }
+          if [[ ${#pids[@]} -eq 0 ]]; then
+            echo "No integration test suites found to run."
+          else
+            # Wait for all processes
+            for pid_info in "${pids[@]}"; do
+              IFS=':' read -r pid name outFile errFile <<< "$pid_info"
+              echo "Waiting for $name (PID $pid)..."
+              wait "$pid"
+              exit_code=$?
+              echo "$name exited with code $exit_code"
+              echo "---- $name STDOUT ----"
+              [[ -f "$outFile" ]] && tail -200 "$outFile" || echo "(no stdout log)"
+              echo "---- $name STDERR ----"
+              [[ -f "$errFile" ]] && tail -200 "$errFile" || echo "(no stderr log)"
 
-              if ($exit -ne 0) {
-                Write-Host "$($info.Name) integration tests FAILED (exit $exit)" -ForegroundColor Red
-                $failed = $true
-              } else {
-                Write-Host "$($info.Name) integration tests passed" -ForegroundColor Green
-              }
-            }
-          }
+              if [[ $exit_code -ne 0 ]]; then
+                echo "$name integration tests FAILED (exit $exit_code)"
+                failed=1
+              else
+                echo "$name integration tests passed"
+              fi
+            done
+          fi
 
-
-          if ($failed) {
-            Write-Host "One or more integration test suites failed." -ForegroundColor Red
+          if [[ $failed -ne 0 ]]; then
+            echo "One or more integration test suites failed."
             exit 1
-          }
+          fi
 
-          Write-Host "Integration tests completed successfully." -ForegroundColor Green
+          echo "Integration tests completed successfully."
