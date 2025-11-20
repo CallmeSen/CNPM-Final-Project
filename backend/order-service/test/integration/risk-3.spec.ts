@@ -17,9 +17,6 @@ describe('Risk 3: WebSocket Broadcast Failure When Clients Disconnect (Integrati
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
-      .overrideProvider('MONGO_ORDER_URL')
-      .useValue('mongodb://order:order123@localhost:28018/Order')
-      .compile();
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');

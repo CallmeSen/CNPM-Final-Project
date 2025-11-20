@@ -6,18 +6,16 @@ import { AppModule } from '../../src/app.module';
 
 jest.setTimeout(30000);
 
+process.env.JWT_SECRET = 'test-secret';
+process.env.MONGO_ORDER_URL = 'mongodb://order:order123@localhost:28018/Order';
+
 describe('Risk 1: MongoDB Connection Failure During Order Creation (Integration)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    process.env.JWT_SECRET = 'test-secret';
-
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    })
-      .overrideProvider('MONGO_ORDER_URL')
-      .useValue('mongodb://order:order123@localhost:28018/Order')
-      .compile();
+    }).compile();
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
