@@ -21,137 +21,86 @@ on:
       - completed
 
 jobs:
-  intergration-test:
-    name: Integration Test
+  auth-integration-test:
+    name: Auth Service Integration Test
     runs-on: self-hosted
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Start MongoDB Services
-        shell: powershell
-        run: |
-          Write-Host "Checking if MongoDB containers are running..."
-          docker ps --filter "name=mongodb" --format "table {{.Names}}\t{{.Status}}"
-
       - name: Install Dependencies
-        shell: powershell
-        run: |
-          $services = @('auth-service', 'restaurant-service', 'order-service', 'payment-service')
-          foreach ($svc in $services) {
-            $path = "backend/$svc"
-            if (Test-Path $path) {
-              Write-Host "Installing dependencies for $svc..."
-              Push-Location $path
-              npm ci --silent
-              Pop-Location
-            }
-          }
+        working-directory: backend/auth-service
+        run: npm ci
 
       - name: Run Integration Tests
-        shell: powershell
-        run: |
-          Write-Host "== Starting Integration Tests ==" -ForegroundColor Cyan
+        working-directory: backend/auth-service
+        run: npm run test:integration
+        continue-on-error: false
 
-          $services = @(
-            @{ name = 'auth-service'; path = 'backend\auth-service' },
-            @{ name = 'restaurant-service'; path = 'backend\restaurant-service' },
-            @{ name = 'order-service'; path = 'backend\order-service' },
-            @{ name = 'payment-service'; path = 'backend\payment-service' }
-          )
+  restaurant-integration-test:
+    name: Restaurant Service Integration Test
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-          $rootDir = Get-Location
-          $jobs = @()
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-          foreach ($svc in $services) {
-            $svcName = $svc.name
-            $svcPath = Join-Path $rootDir $svc.path
+      - name: Install Dependencies
+        working-directory: backend/restaurant-service
+        run: npm ci
 
-            if (-not (Test-Path $svcPath)) {
-              Write-Host "Skipping $svcName - path not found" -ForegroundColor Yellow
-              continue
-            }
+      - name: Run Integration Tests
+        working-directory: backend/restaurant-service
+        run: npm run test:integration
+        continue-on-error: false
 
-            $pkgPath = Join-Path $svcPath 'package.json'
-            if (-not (Test-Path $pkgPath)) {
-              Write-Host "Skipping $svcName - no package.json" -ForegroundColor Yellow
-              continue
-            }
+  order-integration-test:
+    name: Order Service Integration Test
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            # Detect test command
-            $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
-            if ($pkg.scripts.'test:integration') {
-              $testCmd = 'npm run test:integration'
-            } elseif ($pkg.scripts.test) {
-              $testCmd = 'npm test -- --runInBand'
-            } else {
-              Write-Host "Skipping $svcName - no test script" -ForegroundColor Yellow
-              continue
-            }
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-            Write-Host "Starting $svcName tests..." -ForegroundColor Green
-            
-            $logFile = Join-Path $rootDir "$svcName.log"
-            
-            $job = Start-Job -ScriptBlock {
-              param($dir, $cmd, $log)
-              Set-Location $dir
-              $output = Invoke-Expression $cmd 2>&1 | Out-String
-              $output | Out-File $log
-              $LASTEXITCODE
-            } -ArgumentList $svcPath, $testCmd, $logFile
+      - name: Install Dependencies
+        working-directory: backend/order-service
+        run: npm ci
 
-            $jobs += @{ Name = $svcName; Job = $job; Log = $logFile }
-          }
+      - name: Run Integration Tests
+        working-directory: backend/order-service
+        run: npm run test:integration
+        continue-on-error: false
 
-          if ($jobs.Count -eq 0) {
-            Write-Host "No integration tests to run" -ForegroundColor Yellow
-            exit 0
-          }
+  payment-integration-test:
+    name: Payment Service Integration Test
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-          # Wait and collect results
-          Write-Host "`n== Waiting for tests to complete ==`n" -ForegroundColor Cyan
-          $failed = $false
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-          foreach ($info in $jobs) {
-            $name = $info.Name
-            $job = $info.Job
-            $log = $info.Log
+      - name: Install Dependencies
+        working-directory: backend/payment-service
+        run: npm ci
 
-            Write-Host "Waiting for $name..." -ForegroundColor Cyan
-            $exitCode = Wait-Job $job | Receive-Job
-            Remove-Job $job
-
-            Write-Host "`n==== $name Results ====" -ForegroundColor Cyan
-            if (Test-Path $log) {
-              Get-Content $log | Select-Object -Last 50
-            } else {
-              Write-Host "(no log file)" -ForegroundColor Yellow
-            }
-
-            if ($exitCode -eq 0) {
-              Write-Host "`n$name: PASSED" -ForegroundColor Green
-            } else {
-              Write-Host "`n$name: FAILED (exit $exitCode)" -ForegroundColor Red
-              $failed = $true
-            }
-          }
-
-          Write-Host "`n==========================`n" -ForegroundColor Cyan
-          if ($failed) {
-            Write-Host "Some tests FAILED" -ForegroundColor Red
-            exit 1
-          } else {
-            Write-Host "All tests PASSED" -ForegroundColor Green
-          }
+      - name: Run Integration Tests
+        working-directory: backend/payment-service
+        run: npm run test:integration
+        continue-on-error: false
