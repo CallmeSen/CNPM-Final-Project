@@ -21,9 +21,42 @@ on:
       - completed
 
 jobs:
+  setup-infrastructure:
+    name: Start Docker Compose Stack
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start Docker Compose Stack
+        shell: powershell
+        run: |
+          Write-Host "Checking CNPM Docker Compose stack..." -ForegroundColor Cyan
+          
+          # Check if containers are already running
+          $running = docker-compose -p cnpm-final-project ps -q 2>$null
+          
+          if ($running) {
+            Write-Host "Stack already running, checking health..." -ForegroundColor Green
+            docker-compose -p cnpm-final-project ps
+          } else {
+            Write-Host "Starting Docker Compose stack..." -ForegroundColor Yellow
+            docker-compose -p cnpm-final-project up -d mongodb mongodb-restaurant mongodb-order mongodb-payment redis kafka zookeeper
+            
+            Write-Host "`nWaiting for services to be ready..." -ForegroundColor Cyan
+            Start-Sleep -Seconds 15
+          }
+          
+          Write-Host "`nDocker Compose Services Status:" -ForegroundColor Cyan
+          docker-compose -p cnpm-final-project ps
+          
+          Write-Host "`nMongoDB Health Check:" -ForegroundColor Cyan
+          docker ps --filter "name=mongodb" --format "table {{.Names}}\t{{.Status}}"
+
   auth-integration-test:
     name: Auth Service Integration Test
     runs-on: self-hosted
+    needs: setup-infrastructure
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -45,6 +78,7 @@ jobs:
   restaurant-integration-test:
     name: Restaurant Service Integration Test
     runs-on: self-hosted
+    needs: setup-infrastructure
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,6 +100,7 @@ jobs:
   order-integration-test:
     name: Order Service Integration Test
     runs-on: self-hosted
+    needs: setup-infrastructure
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -87,6 +122,7 @@ jobs:
   payment-integration-test:
     name: Payment Service Integration Test
     runs-on: self-hosted
+    needs: setup-infrastructure
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
