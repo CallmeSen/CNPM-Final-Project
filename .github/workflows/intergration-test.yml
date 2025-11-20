@@ -41,83 +41,106 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Run integration tests (self-hosted, parallel)
-        shell: bash
+        shell: powershell
         run: |
-          echo "== Integration test runner started on self-hosted runner =="
+          Write-Host "== Integration test runner started on self-hosted runner =="
 
           # Ensure Docker is available (optional)
-          docker version --format '{{.Server.Version}}' 2>/dev/null || echo "Docker daemon not reachable"
+          try {
+            docker version --format '{{.Server.Version}}' 2>$null
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "Docker daemon not reachable" -ForegroundColor Yellow
+            }
+          } catch {
+            Write-Host "Docker not available" -ForegroundColor Yellow
+          }
 
-          services=(
-            "auth-service:backend/auth-service"
-            "restaurant-service:backend/restaurant-service"
-            "order-service:backend/order-service"
-            "payment-service:backend/payment-service"
+          $services = @(
+            @{ name = 'auth-service'; path = 'backend/auth-service' },
+            @{ name = 'restaurant-service'; path = 'backend/restaurant-service' },
+            @{ name = 'order-service'; path = 'backend/order-service' },
+            @{ name = 'payment-service'; path = 'backend/payment-service' }
           )
 
-          pids=()
-          failed=0
+          $jobs = @()
+          $failed = $false
 
-          for svc in "${services[@]}"; do
-            IFS=':' read -r name path <<< "$svc"
+          foreach ($svc in $services) {
+            $svcPath = $svc.path
+            $svcName = $svc.name
 
-            if [[ ! -d "$path" ]]; then
-              echo "Skipping $name — path not found: $path"
+            if (-not (Test-Path $svcPath)) {
+              Write-Host "Skipping $svcName - path not found: $svcPath"
               continue
-            fi
+            }
 
-            if [[ ! -f "$path/package.json" ]]; then
-              echo "Skipping $name — package.json not found in $path"
+            if (-not (Test-Path "$svcPath/package.json")) {
+              Write-Host "Skipping $svcName - package.json not found"
               continue
-            fi
+            }
 
-            echo "Preparing $name tests..."
+            Write-Host "Preparing $svcName tests..."
 
             # Detect test command
-            if grep -q '"test:integration"' "$path/package.json"; then
-              testCmd="npm run test:integration --silent"
-            elif grep -q '"test"' "$path/package.json"; then
-              testCmd="npm test -- --runInBand --silent"
-            else
-              echo "No test script found for $name — skipping"
+            $pkg = Get-Content "$svcPath/package.json" -Raw | ConvertFrom-Json
+            if ($pkg.scripts.'test:integration') {
+              $testCmd = 'npm run test:integration --silent'
+            } elseif ($pkg.scripts.test) {
+              $testCmd = 'npm test -- --runInBand --silent'
+            } else {
+              Write-Host "No test script found for $svcName - skipping"
               continue
-            fi
+            }
 
-            # Start background process
-            outFile="${name}.out.log"
-            errFile="${name}.err.log"
-            echo "Starting $name: cd $path && npm ci --silent && $testCmd"
-            (cd "$path" && npm ci --silent && eval "$testCmd") > "$outFile" 2> "$errFile" &
-            pids+=("$!:$name:$outFile:$errFile")
-          done
+            # Start background job
+            $outFile = Join-Path $PWD "$svcName.out.log"
+            $errFile = Join-Path $PWD "$svcName.err.log"
+            Write-Host "Starting $svcName..."
+            
+            $job = Start-Job -ScriptBlock {
+              param($path, $cmd, $outFile, $errFile)
+              Set-Location $path
+              npm ci --silent 2>&1 | Out-File $outFile -Append
+              Invoke-Expression $cmd 2>&1 | Out-File $outFile -Append
+              $LASTEXITCODE
+            } -ArgumentList $svcPath, $testCmd, $outFile, $errFile
 
-          if [[ ${#pids[@]} -eq 0 ]]; then
-            echo "No integration test suites found to run."
-          else
-            # Wait for all processes
-            for pid_info in "${pids[@]}"; do
-              IFS=':' read -r pid name outFile errFile <<< "$pid_info"
-              echo "Waiting for $name (PID $pid)..."
-              wait "$pid"
-              exit_code=$?
-              echo "$name exited with code $exit_code"
-              echo "---- $name STDOUT ----"
-              [[ -f "$outFile" ]] && tail -200 "$outFile" || echo "(no stdout log)"
-              echo "---- $name STDERR ----"
-              [[ -f "$errFile" ]] && tail -200 "$errFile" || echo "(no stderr log)"
+            $jobs += @{ Name = $svcName; Job = $job; Out = $outFile; Err = $errFile }
+          }
 
-              if [[ $exit_code -ne 0 ]]; then
-                echo "$name integration tests FAILED (exit $exit_code)"
-                failed=1
-              else
-                echo "$name integration tests passed"
-              fi
-            done
-          fi
+          if ($jobs.Count -eq 0) {
+            Write-Host "No integration test suites found to run." -ForegroundColor Yellow
+          } else {
+            # Wait for all jobs
+            foreach ($jobInfo in $jobs) {
+              $job = $jobInfo.Job
+              $name = $jobInfo.Name
+              Write-Host "Waiting for $name (Job ID $($job.Id))..."
+              $result = Wait-Job $job | Receive-Job
+              $exitCode = if ($result) { $result } else { 0 }
+              
+              Write-Host "$name exited with code $exitCode"
+              Write-Host "---- $name OUTPUT ----"
+              if (Test-Path $jobInfo.Out) { 
+                Get-Content $jobInfo.Out -Tail 200 
+              } else { 
+                Write-Host "(no output log)" 
+              }
 
-          if [[ $failed -ne 0 ]]; then
-            echo "One or more integration test suites failed."
+              Remove-Job $job
+
+              if ($exitCode -ne 0) {
+                Write-Host "$name integration tests FAILED (exit $exitCode)" -ForegroundColor Red
+                $failed = $true
+              } else {
+                Write-Host "$name integration tests passed" -ForegroundColor Green
+              }
+            }
+          }
+
+          if ($failed) {
+            Write-Host "One or more integration test suites failed." -ForegroundColor Red
             exit 1
-          fi
+          }
 
-          echo "Integration tests completed successfully."
+          Write-Host "Integration tests completed successfully." -ForegroundColor Green
