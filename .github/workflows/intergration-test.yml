@@ -34,113 +34,124 @@ jobs:
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          node-version: '20'
 
-      - name: Run integration tests (self-hosted, parallel)
+      - name: Start MongoDB Services
         shell: powershell
         run: |
-          Write-Host "== Integration test runner started on self-hosted runner =="
+          Write-Host "Checking if MongoDB containers are running..."
+          docker ps --filter "name=mongodb" --format "table {{.Names}}\t{{.Status}}"
 
-          # Ensure Docker is available (optional)
-          try {
-            docker version --format '{{.Server.Version}}' 2>$null
-            if ($LASTEXITCODE -ne 0) {
-              Write-Host "Docker daemon not reachable" -ForegroundColor Yellow
+      - name: Install Dependencies
+        shell: powershell
+        run: |
+          $services = @('auth-service', 'restaurant-service', 'order-service', 'payment-service')
+          foreach ($svc in $services) {
+            $path = "backend/$svc"
+            if (Test-Path $path) {
+              Write-Host "Installing dependencies for $svc..."
+              Push-Location $path
+              npm ci --silent
+              Pop-Location
             }
-          } catch {
-            Write-Host "Docker not available" -ForegroundColor Yellow
           }
 
+      - name: Run Integration Tests
+        shell: powershell
+        run: |
+          Write-Host "== Starting Integration Tests ==" -ForegroundColor Cyan
+
           $services = @(
-            @{ name = 'auth-service'; path = 'backend/auth-service' },
-            @{ name = 'restaurant-service'; path = 'backend/restaurant-service' },
-            @{ name = 'order-service'; path = 'backend/order-service' },
-            @{ name = 'payment-service'; path = 'backend/payment-service' }
+            @{ name = 'auth-service'; path = 'backend\auth-service' },
+            @{ name = 'restaurant-service'; path = 'backend\restaurant-service' },
+            @{ name = 'order-service'; path = 'backend\order-service' },
+            @{ name = 'payment-service'; path = 'backend\payment-service' }
           )
 
+          $rootDir = Get-Location
           $jobs = @()
-          $failed = $false
 
           foreach ($svc in $services) {
-            $svcPath = $svc.path
             $svcName = $svc.name
+            $svcPath = Join-Path $rootDir $svc.path
 
             if (-not (Test-Path $svcPath)) {
-              Write-Host "Skipping $svcName - path not found: $svcPath"
+              Write-Host "Skipping $svcName - path not found" -ForegroundColor Yellow
               continue
             }
 
-            if (-not (Test-Path "$svcPath/package.json")) {
-              Write-Host "Skipping $svcName - package.json not found"
+            $pkgPath = Join-Path $svcPath 'package.json'
+            if (-not (Test-Path $pkgPath)) {
+              Write-Host "Skipping $svcName - no package.json" -ForegroundColor Yellow
               continue
             }
-
-            Write-Host "Preparing $svcName tests..."
 
             # Detect test command
-            $pkg = Get-Content "$svcPath/package.json" -Raw | ConvertFrom-Json
+            $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
             if ($pkg.scripts.'test:integration') {
-              $testCmd = 'npm run test:integration --silent'
+              $testCmd = 'npm run test:integration'
             } elseif ($pkg.scripts.test) {
-              $testCmd = 'npm test -- --runInBand --silent'
+              $testCmd = 'npm test -- --runInBand'
             } else {
-              Write-Host "No test script found for $svcName - skipping"
+              Write-Host "Skipping $svcName - no test script" -ForegroundColor Yellow
               continue
             }
 
-            # Start background job
-            $outFile = Join-Path $PWD "$svcName.out.log"
-            $errFile = Join-Path $PWD "$svcName.err.log"
-            Write-Host "Starting $svcName..."
+            Write-Host "Starting $svcName tests..." -ForegroundColor Green
+            
+            $logFile = Join-Path $rootDir "$svcName.log"
             
             $job = Start-Job -ScriptBlock {
-              param($path, $cmd, $outFile, $errFile)
-              Set-Location $path
-              npm ci --silent 2>&1 | Out-File $outFile -Append
-              Invoke-Expression $cmd 2>&1 | Out-File $outFile -Append
+              param($dir, $cmd, $log)
+              Set-Location $dir
+              $output = Invoke-Expression $cmd 2>&1 | Out-String
+              $output | Out-File $log
               $LASTEXITCODE
-            } -ArgumentList $svcPath, $testCmd, $outFile, $errFile
+            } -ArgumentList $svcPath, $testCmd, $logFile
 
-            $jobs += @{ Name = $svcName; Job = $job; Out = $outFile; Err = $errFile }
+            $jobs += @{ Name = $svcName; Job = $job; Log = $logFile }
           }
 
           if ($jobs.Count -eq 0) {
-            Write-Host "No integration test suites found to run." -ForegroundColor Yellow
-          } else {
-            # Wait for all jobs
-            foreach ($jobInfo in $jobs) {
-              $job = $jobInfo.Job
-              $name = $jobInfo.Name
-              Write-Host "Waiting for $name (Job ID $($job.Id))..."
-              $result = Wait-Job $job | Receive-Job
-              $exitCode = if ($result) { $result } else { 0 }
-              
-              Write-Host "$name exited with code $exitCode"
-              Write-Host "---- $name OUTPUT ----"
-              if (Test-Path $jobInfo.Out) { 
-                Get-Content $jobInfo.Out -Tail 200 
-              } else { 
-                Write-Host "(no output log)" 
-              }
+            Write-Host "No integration tests to run" -ForegroundColor Yellow
+            exit 0
+          }
 
-              Remove-Job $job
+          # Wait and collect results
+          Write-Host "`n== Waiting for tests to complete ==`n" -ForegroundColor Cyan
+          $failed = $false
 
-              if ($exitCode -ne 0) {
-                Write-Host "$name integration tests FAILED (exit $exitCode)" -ForegroundColor Red
-                $failed = $true
-              } else {
-                Write-Host "$name integration tests passed" -ForegroundColor Green
-              }
+          foreach ($info in $jobs) {
+            $name = $info.Name
+            $job = $info.Job
+            $log = $info.Log
+
+            Write-Host "Waiting for $name..." -ForegroundColor Cyan
+            $exitCode = Wait-Job $job | Receive-Job
+            Remove-Job $job
+
+            Write-Host "`n==== $name Results ====" -ForegroundColor Cyan
+            if (Test-Path $log) {
+              Get-Content $log | Select-Object -Last 50
+            } else {
+              Write-Host "(no log file)" -ForegroundColor Yellow
+            }
+
+            if ($exitCode -eq 0) {
+              Write-Host "`n$name: PASSED" -ForegroundColor Green
+            } else {
+              Write-Host "`n$name: FAILED (exit $exitCode)" -ForegroundColor Red
+              $failed = $true
             }
           }
 
+          Write-Host "`n==========================`n" -ForegroundColor Cyan
           if ($failed) {
-            Write-Host "One or more integration test suites failed." -ForegroundColor Red
+            Write-Host "Some tests FAILED" -ForegroundColor Red
             exit 1
+          } else {
+            Write-Host "All tests PASSED" -ForegroundColor Green
           }
-
-          Write-Host "Integration tests completed successfully." -ForegroundColor Green
