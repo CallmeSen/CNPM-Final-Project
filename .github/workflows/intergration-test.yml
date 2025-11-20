@@ -1,6 +1,18 @@
 name: Intergration Test
 
 on:
+  push:
+    branches:
+      - main
+      - source
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches:
+      - main
+      - source
+    paths:
+      - 'backend/**'
   workflow_run:
     workflows:
       - backend-ci
