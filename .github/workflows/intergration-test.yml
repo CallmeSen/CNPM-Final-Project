@@ -3,7 +3,6 @@ name: Intergration Test
 on:
   workflow_run:
     workflows:
-      - frontend-ci
       - backend-ci
     types:
       - completed
