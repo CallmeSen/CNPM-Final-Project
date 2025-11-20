@@ -5,6 +5,9 @@ import { AppModule } from '../../src/app.module';
 
 jest.setTimeout(30000);
 
+process.env.JWT_SECRET = 'test-secret';
+process.env.MONGO_ORDER_URL = 'mongodb://order:order123@localhost:28018/Order';
+
 describe('Risk 10: Health Check Failure Due to Port Mismatch (Integration)', () => {
   let app: INestApplication;
 

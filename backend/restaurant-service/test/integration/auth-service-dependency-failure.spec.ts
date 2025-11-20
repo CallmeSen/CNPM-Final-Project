@@ -5,6 +5,9 @@ import { AppModule } from '../../src/app.module';
 import { MongoClient } from 'mongodb';
 
 jest.setTimeout(30000);
+
+process.env.JWT_SECRET = 'test-secret';
+process.env.MONGO_RESTAURANT_URL = 'mongodb://restaurant:restaurant123@localhost:28017/Restaurant';
 import { JwtAuthGuard } from '../../src/common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../src/common/guards/roles.guard';
 

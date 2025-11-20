@@ -5,18 +5,16 @@ import { AppModule } from '../../src/app.module';
 
 jest.setTimeout(30000);
 
+process.env.JWT_SECRET = 'mismatched-secret'; // Simulate secret mismatch
+process.env.MONGO_ORDER_URL = 'mongodb://order:order123@localhost:28018/Order';
+
 describe('Risk 2: JWT Token Verification Failure Due to Secret Mismatch (Integration)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    })
-      .overrideProvider('MONGO_ORDER_URL')
-      .useValue('mongodb://order:order123@localhost:28018/Order')
-      .overrideProvider('JWT_SECRET')
-      .useValue('mismatched-secret') // Simulate secret mismatch
-      .compile();
+    }).compile();
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
