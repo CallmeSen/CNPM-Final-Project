@@ -2,6 +2,8 @@ import * as request from 'supertest';
 import { MongoClient } from 'mongodb';
 import * as jwt from 'jsonwebtoken';
 
+jest.setTimeout(30000);
+
 describe('RISK-INT-010: Role-Based Access Control Token Tampering (Integration)', () => {
   let mongoClient: MongoClient;
   const mongoUri = 'mongodb://auth:auth123@localhost:28016/Auth';

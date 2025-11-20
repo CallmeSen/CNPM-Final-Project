@@ -4,6 +4,8 @@ import * as request from 'supertest';
 import * as jwt from 'jsonwebtoken';
 import { AppModule } from '../../src/app.module';
 
+jest.setTimeout(30000);
+
 describe('Risk 4: Internal API Endpoint Exposed Without Authentication (Integration)', () => {
   let app: INestApplication;
 

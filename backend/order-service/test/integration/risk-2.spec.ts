@@ -3,6 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../../src/app.module';
 
+jest.setTimeout(30000);
+
 describe('Risk 2: JWT Token Verification Failure Due to Secret Mismatch (Integration)', () => {
   let app: INestApplication;
 

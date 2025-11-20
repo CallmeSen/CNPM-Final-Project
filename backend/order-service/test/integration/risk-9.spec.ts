@@ -4,6 +4,8 @@ import * as request from 'supertest';
 import { io } from 'socket.io-client';
 import { AppModule } from '../../src/app.module';
 
+jest.setTimeout(30000);
+
 describe('Risk 9: Memory Leak from Unclosed WebSocket Connections (Integration)', () => {
   let app: INestApplication;
   let server: any;

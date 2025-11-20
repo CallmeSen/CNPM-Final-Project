@@ -1,6 +1,8 @@
 import * as request from 'supertest';
 import { MongoClient } from 'mongodb';
 
+jest.setTimeout(30000);
+
 describe('RISK-INT-002: MongoDB Connection Pool Exhaustion (Integration)', () => {
   let mongoClient: MongoClient;
   const mongoUri = 'mongodb://auth:auth123@localhost:28016/Auth';

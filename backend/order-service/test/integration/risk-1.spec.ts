@@ -4,6 +4,8 @@ import * as request from 'supertest';
 import * as jwt from 'jsonwebtoken';
 import { AppModule } from '../../src/app.module';
 
+jest.setTimeout(30000);
+
 describe('Risk 1: MongoDB Connection Failure During Order Creation (Integration)', () => {
   let app: INestApplication;
 

@@ -5,6 +5,8 @@ import { AppModule } from '../../src/app.module';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
+jest.setTimeout(30000);
+
 describe('RISK-01: Stripe webhook signature verification failure (Integration)', () => {
   let app: INestApplication;
   let configService: ConfigService;

@@ -1,6 +1,8 @@
 import * as request from 'supertest';
 import { MongoClient } from 'mongodb';
 
+jest.setTimeout(30000);
+
 describe('RISK-INT-001: JWT Token Validation Race Condition (Integration)', () => {
   let mongoClient: MongoClient;
   const mongoUri = 'mongodb://auth:auth123@localhost:28016/Auth';

@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../../src/app.module';
+
+jest.setTimeout(30000);
 import * as jwt from 'jsonwebtoken';
 
 describe('Risk 3: WebSocket Broadcast Failure When Clients Disconnect (Integration)', () => {

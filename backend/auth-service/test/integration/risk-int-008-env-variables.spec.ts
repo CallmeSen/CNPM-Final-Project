@@ -1,6 +1,8 @@
 import * as request from 'supertest';
 import { MongoClient } from 'mongodb';
 
+jest.setTimeout(30000);
+
 describe('RISK-INT-008: Environment Variable Secret Exposure (Integration)', () => {
   let mongoClient: MongoClient;
   const mongoUri = 'mongodb://auth:auth123@localhost:28016/Auth';

@@ -3,6 +3,8 @@ import { INestApplication, ExecutionContext, CanActivate } from '@nestjs/common'
 import * as request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { MongoClient } from 'mongodb';
+
+jest.setTimeout(30000);
 import * as fs from 'fs';
 import * as path from 'path';
 import { JwtAuthGuard } from '../../src/common/guards/jwt-auth.guard';

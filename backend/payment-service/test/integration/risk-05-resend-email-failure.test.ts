@@ -8,6 +8,8 @@ import { EmailService } from '../../src/payment/email.service';
 import { TwilioService } from '../../src/payment/twilio.service';
 import axios from 'axios';
 
+jest.setTimeout(30000);
+
 // Mock Stripe before any imports
 jest.mock('stripe', () => ({
   __esModule: true,

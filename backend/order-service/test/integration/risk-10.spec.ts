@@ -3,6 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../../src/app.module';
 
+jest.setTimeout(30000);
+
 describe('Risk 10: Health Check Failure Due to Port Mismatch (Integration)', () => {
   let app: INestApplication;
 

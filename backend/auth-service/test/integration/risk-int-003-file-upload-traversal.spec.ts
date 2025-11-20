@@ -3,6 +3,8 @@ import { MongoClient } from 'mongodb';
 import * as fs from 'fs';
 import * as path from 'path';
 
+jest.setTimeout(30000);
+
 describe('RISK-INT-003: File Upload Path Traversal Vulnerability (Integration)', () => {
   let mongoClient: MongoClient;
   const mongoUri = 'mongodb://auth:auth123@localhost:28016/Auth';

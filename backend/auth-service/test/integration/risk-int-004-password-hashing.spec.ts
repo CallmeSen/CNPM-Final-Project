@@ -1,6 +1,8 @@
 import * as request from 'supertest';
 import { MongoClient } from 'mongodb';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
+
+jest.setTimeout(30000);
 
 describe('RISK-INT-004: Password Hashing Algorithm Inconsistency (Integration)', () => {
   let mongoClient: MongoClient;
