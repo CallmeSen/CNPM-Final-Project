@@ -12,10 +12,6 @@ jobs:
   intergration-test:
     name: Integration Test
     runs-on: self-hosted
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main'
 
     steps:
       - name: Checkout code
@@ -32,54 +28,89 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Run integration tests (self-hosted)
+      - name: Run integration tests (self-hosted, parallel)
         shell: pwsh
         run: |
           Write-Host "== Integration test runner started on self-hosted runner =="
 
-          # Ensure Docker is available
-          docker version --format '{{.Server.Version}}'
+          # Ensure Docker is available (optional)
+          docker version --format '{{.Server.Version}}' 2>$null
           if ($LASTEXITCODE -ne 0) {
-            Write-Host "Docker daemon not reachable. Ensure Docker Desktop is running on the runner." -ForegroundColor Red
-            exit 1
+            Write-Host "Docker daemon not reachable. Ensure Docker is available on the runner." -ForegroundColor Yellow
           }
 
-          # If docker-compose file exists, bring up the stack (adjust as needed)
-          if (Test-Path 'docker-compose.yml') {
-            Write-Host "Found docker-compose.yml — bringing up stack..."
-            docker compose up --build -d
-            Start-Sleep -Seconds 10
-          }
+          $services = @(
+            @{ name = 'auth-service'; path = 'backend/auth-service' },
+            @{ name = 'restaurant-service'; path = 'backend/restaurant-service' },
+            @{ name = 'order-service'; path = 'backend/order-service' },
+            @{ name = 'payment-service'; path = 'backend/payment-service' }
+          )
 
-          # Example: run per-service integration tests. Adjust commands to your repo's test commands.
+          $processInfos = @()
           $failed = $false
 
-          if (Test-Path 'backend/auth-service/package.json') {
-            Write-Host "Running auth-service integration tests..."
-            Push-Location backend/auth-service
-            npm ci
-            # replace the test command below with your real integration test script if different
-            npm test -- --runInBand --detectOpenHandles
-            if ($LASTEXITCODE -ne 0) { $failed = $true }
-            Pop-Location
+          foreach ($svc in $services) {
+            $svcPath = $svc.path
+            $svcName = $svc.name
+
+            if (-not (Test-Path $svcPath)) {
+              Write-Host "Skipping $svcName — path not found: $svcPath"
+              continue
+            }
+
+            $pkgFile = Join-Path $svcPath 'package.json'
+            if (-not (Test-Path $pkgFile)) {
+              Write-Host "Skipping $svcName — package.json not found in $svcPath"
+              continue
+            }
+
+            Write-Host "Preparing $svcName tests..."
+
+            # Build the command depending on presence of test:integration script
+            $pkg = Get-Content $pkgFile -Raw | ConvertFrom-Json
+            if ($pkg.scripts.'test:integration') {
+              $testCmd = 'npm run test:integration --silent'
+            } elseif ($pkg.scripts.test) {
+              $testCmd = 'npm test -- --runInBand --silent'
+            } else {
+              Write-Host "No test script found for $svcName — skipping"
+              continue
+            }
+
+            # Start a background process for each service test
+            $outFile = Join-Path $PWD ("${svcName}.out.log")
+            $errFile = Join-Path $PWD ("${svcName}.err.log")
+            $command = "Set-Location -Path '$svcPath'; npm ci --silent; $testCmd; exit `$LASTEXITCODE"
+            Write-Host "Starting $svcName: $command"
+            $proc = Start-Process -FilePath pwsh -ArgumentList "-NoProfile","-Command",$command -PassThru -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+            $processInfos += @{ Name = $svcName; Path = $svcPath; Proc = $proc; Out = $outFile; Err = $errFile }
           }
 
-          # Add additional services here if you want (order, payment, restaurant)
-          # Example for order-service:
-          if (Test-Path 'backend/order-service/package.json') {
-            Write-Host "Running order-service integration tests..."
-            Push-Location backend/order-service
-            npm ci
-            npm test -- --runInBand --detectOpenHandles
-            if ($LASTEXITCODE -ne 0) { $failed = $true }
-            Pop-Location
+          if ($processInfos.Count -eq 0) {
+            Write-Host "No integration test suites found to run." -ForegroundColor Yellow
+          } else {
+            # Wait for all processes and collect results
+            foreach ($info in $processInfos) {
+              $proc = $info.Proc
+              Write-Host "Waiting for $($info.Name) (PID $($proc.Id))..."
+              Wait-Process -Id $proc.Id
+              $proc.Refresh()
+              $exit = $proc.ExitCode
+              Write-Host "$($info.Name) exited with code $exit"
+              Write-Host "---- $($info.Name) STDOUT ----"
+              if (Test-Path $info.Out) { Get-Content $info.Out -Tail 200 } else { Write-Host "(no stdout log)" }
+              Write-Host "---- $($info.Name) STDERR ----"
+              if (Test-Path $info.Err) { Get-Content $info.Err -Tail 200 } else { Write-Host "(no stderr log)" }
+
+              if ($exit -ne 0) {
+                Write-Host "$($info.Name) integration tests FAILED (exit $exit)" -ForegroundColor Red
+                $failed = $true
+              } else {
+                Write-Host "$($info.Name) integration tests passed" -ForegroundColor Green
+              }
+            }
           }
 
-          # Tear down compose stack (optional)
-          if (Test-Path 'docker-compose.yml') {
-            Write-Host "Tearing down docker-compose stack..."
-            docker compose down
-          }
 
           if ($failed) {
             Write-Host "One or more integration test suites failed." -ForegroundColor Red

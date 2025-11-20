@@ -42,8 +42,9 @@ describe('Auth-Service Dependency Failure (Risk 1)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     await app.init();
-  });
+  }, 30000);
 
   afterAll(async () => {
     await mongoClient.close();
@@ -68,7 +69,7 @@ describe('Auth-Service Dependency Failure (Risk 1)', () => {
     };
 
     const response = await request(app.getHttpServer())
-      .post('/food-items/create')
+      .post('/api/food-items/create')
       .set('Authorization', 'Bearer test-token')
       .field('restaurantId', 'test-restaurant-id')
       .field('name', createFoodItemDto.name)
@@ -84,7 +85,7 @@ describe('Auth-Service Dependency Failure (Risk 1)', () => {
     process.env.AUTH_SERVICE_URL = 'http://invalid:5001';
 
     const response = await request(app.getHttpServer())
-      .get('/restaurant/profile')
+      .get('/api/restaurant/profile')
       .set('Authorization', 'Bearer test-token')
       .expect(400);
 

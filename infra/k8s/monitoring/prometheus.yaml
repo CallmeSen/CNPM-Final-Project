@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: prometheus-config
-  namespace: cnpm-food-delivery
+  namespace: monitoring
 data:
   prometheus.yml: |
     global:
@@ -18,13 +18,13 @@ data:
         static_configs:
           - targets: ['localhost:9090']
       
-      # Scrape Kubernetes services with annotations
+      # Scrape Kubernetes services with annotations from ALL namespaces
       - job_name: 'kubernetes-services'
         kubernetes_sd_configs:
           - role: service
+            # Empty names list = scrape from all namespaces
             namespaces:
-              names:
-                - cnpm-food-delivery
+              names: []
         relabel_configs:
           # Keep only services with prometheus.io/scrape annotation set to true
           - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
@@ -59,9 +59,9 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: prometheus
-  namespace: cnpm-food-delivery
+  namespace: monitoring
 ---
-# ClusterRole for Prometheus to discover services
+# ClusterRole for Prometheus to discover services across all namespaces
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -74,16 +74,18 @@ rules:
       - services
       - endpoints
       - pods
+      - namespaces
     verbs: ["get", "list", "watch"]
   - apiGroups:
       - extensions
+      - networking.k8s.io
     resources:
       - ingresses
     verbs: ["get", "list", "watch"]
   - nonResourceURLs: ["/metrics"]
     verbs: ["get"]
 ---
-# ClusterRoleBinding for Prometheus
+# ClusterRoleBinding for Prometheus (cluster-wide access)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -95,13 +97,13 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: prometheus
-    namespace: cnpm-food-delivery
+    namespace: monitoring
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prometheus
-  namespace: cnpm-food-delivery
+  namespace: monitoring
 spec:
   replicas: 1
   selector:
@@ -147,7 +149,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: prometheus
-  namespace: cnpm-food-delivery
+  namespace: monitoring
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/port: "9090"

@@ -117,36 +117,46 @@ $jobs += Start-PortForward -ServiceName "payment-service" `
 Write-Host "=== Monitoring Services ===" -ForegroundColor Cyan
 Write-Host ""
 
-# Check if monitoring services exist
-$prometheusExists = kubectl get svc prometheus -n $namespace 2>$null
-$grafanaExists = kubectl get svc grafana -n $namespace 2>$null
-$lokiExists = kubectl get svc loki -n $namespace 2>$null
+# Check if monitoring namespace and services exist
+$monitoringNamespace = "monitoring"
+$monitoringNsExists = kubectl get namespace $monitoringNamespace 2>$null
 
-if ($prometheusExists) {
-    $jobs += Start-PortForward -ServiceName "prometheus" `
-        -LocalPort "9090" `
-        -RemotePort "9090" `
-        -Description "Prometheus (Metrics)"
-} else {
-    Write-Host "  Prometheus service not found (skipping)" -ForegroundColor Yellow
-}
+if ($monitoringNsExists) {
+    $prometheusExists = kubectl get svc prometheus -n $monitoringNamespace 2>$null
+    $grafanaExists = kubectl get svc grafana -n $monitoringNamespace 2>$null
+    $lokiExists = kubectl get svc loki -n $monitoringNamespace 2>$null
 
-if ($grafanaExists) {
-    $jobs += Start-PortForward -ServiceName "grafana" `
-        -LocalPort "3030" `
-        -RemotePort "3000" `
-        -Description "Grafana (Dashboards)"
-} else {
-    Write-Host "  Grafana service not found (skipping)" -ForegroundColor Yellow
-}
+    if ($prometheusExists) {
+        $jobs += Start-PortForward -ServiceName "prometheus" `
+            -LocalPort "9090" `
+            -RemotePort "9090" `
+            -Description "Prometheus (Metrics)" `
+            -Namespace $monitoringNamespace
+    } else {
+        Write-Host "  Prometheus service not found (skipping)" -ForegroundColor Yellow
+    }
 
-if ($lokiExists) {
-    $jobs += Start-PortForward -ServiceName "loki" `
-        -LocalPort "3100" `
-        -RemotePort "3100" `
-        -Description "Loki (Logs)"
+    if ($grafanaExists) {
+        $jobs += Start-PortForward -ServiceName "grafana" `
+            -LocalPort "3030" `
+            -RemotePort "3000" `
+            -Description "Grafana (Dashboards)" `
+            -Namespace $monitoringNamespace
+    } else {
+        Write-Host "  Grafana service not found (skipping)" -ForegroundColor Yellow
+    }
+
+    if ($lokiExists) {
+        $jobs += Start-PortForward -ServiceName "loki" `
+            -LocalPort "3100" `
+            -RemotePort "3100" `
+            -Description "Loki (Logs)" `
+            -Namespace $monitoringNamespace
+    } else {
+        Write-Host "  Loki service not found (skipping)" -ForegroundColor Yellow
+    }
 } else {
-    Write-Host "  Loki service not found (skipping)" -ForegroundColor Yellow
+    Write-Host "  Monitoring namespace not found (skipping all monitoring services)" -ForegroundColor Yellow
 }
 
 Write-Host ""

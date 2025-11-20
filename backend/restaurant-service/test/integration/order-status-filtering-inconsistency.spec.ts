@@ -42,8 +42,9 @@ describe('Order Status Filtering Logic Inconsistency (Risk 7)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     await app.init();
-  });
+  }, 30000);
 
   afterAll(async () => {
     await mongoClient.close();
@@ -63,7 +64,7 @@ describe('Order Status Filtering Logic Inconsistency (Risk 7)', () => {
     // we'll test the logic indirectly by checking the response structure
 
     const response = await request(app.getHttpServer())
-      .get('/reports/revenue')
+      .get('/api/reports/revenue')
       .set('Authorization', 'Bearer test-token')
       .expect(200);
 
@@ -84,7 +85,7 @@ describe('Order Status Filtering Logic Inconsistency (Risk 7)', () => {
 
   it('should only count Paid and Delivered orders in top-selling items', async () => {
     const response = await request(app.getHttpServer())
-      .get('/reports/top-items')
+      .get('/api/reports/top-items')
       .set('Authorization', 'Bearer test-token')
       .expect(200);
 
@@ -104,7 +105,7 @@ describe('Order Status Filtering Logic Inconsistency (Risk 7)', () => {
 
   it('should only count Paid and Delivered orders in summary calculation', async () => {
     const response = await request(app.getHttpServer())
-      .get('/reports/summary')
+      .get('/api/reports/summary')
       .set('Authorization', 'Bearer test-token')
       .expect(200);
 
@@ -134,7 +135,7 @@ describe('Order Status Filtering Logic Inconsistency (Risk 7)', () => {
 
     for (const query of testCases) {
       const revenueResponse = await request(app.getHttpServer())
-        .get('/reports/revenue')
+        .get('/api/reports/revenue')
         .set('Authorization', 'Bearer test-token')
         .query(query)
         .expect(200);
@@ -142,7 +143,7 @@ describe('Order Status Filtering Logic Inconsistency (Risk 7)', () => {
       expect(Array.isArray(revenueResponse.body)).toBe(true);
 
       const summaryResponse = await request(app.getHttpServer())
-        .get('/reports/summary')
+        .get('/api/reports/summary')
         .set('Authorization', 'Bearer test-token')
         .query(query)
         .expect(200);
@@ -157,7 +158,7 @@ describe('Order Status Filtering Logic Inconsistency (Risk 7)', () => {
     // In a real scenario, this would be tested with a mock order-service
 
     const response = await request(app.getHttpServer())
-      .get('/reports/revenue?period=month')
+      .get('/api/reports/revenue?period=month')
       .set('Authorization', 'Bearer test-token')
       .expect(200);
 

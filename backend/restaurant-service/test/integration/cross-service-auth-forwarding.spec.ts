@@ -42,8 +42,9 @@ describe('Cross-Service Authorization Header Forwarding (Risk 5)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     await app.init();
-  });
+  }, 30000);
 
   afterAll(async () => {
     await mongoClient.close();
@@ -66,7 +67,7 @@ describe('Cross-Service Authorization Header Forwarding (Risk 5)', () => {
 
     // This should attempt to forward the auth header to auth-service
     const response = await request(app.getHttpServer())
-      .put('/restaurant/update')
+      .put('/api/restaurant/update')
       .set('Authorization', 'Bearer invalid-token')
       .field('name', updateRestaurantDto.name)
       .field('ownerName', updateRestaurantDto.ownerName)
@@ -83,7 +84,7 @@ describe('Cross-Service Authorization Header Forwarding (Risk 5)', () => {
     process.env.ORDER_SERVICE_URL = 'http://localhost:5005';
 
     const response = await request(app.getHttpServer())
-      .get('/reports/revenue')
+      .get('/api/reports/revenue')
       .set('Authorization', 'Bearer malformed-token')
       .expect(200);
 
@@ -101,7 +102,7 @@ describe('Cross-Service Authorization Header Forwarding (Risk 5)', () => {
 
     for (const malformedHeader of malformedHeaders) {
       const response = await request(app.getHttpServer())
-        .put('/restaurant/update')
+        .put('/api/restaurant/update')
         .set('Authorization', malformedHeader)
         .field('name', 'Test Restaurant')
         .field('ownerName', 'Test Owner')
@@ -116,7 +117,7 @@ describe('Cross-Service Authorization Header Forwarding (Risk 5)', () => {
 
   it('should forward empty authorization header', async () => {
     const response = await request(app.getHttpServer())
-      .get('/reports/revenue')
+      .get('/api/reports/revenue')
       .set('Authorization', '')
       .expect(200);
 

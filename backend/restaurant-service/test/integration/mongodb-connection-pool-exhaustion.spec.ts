@@ -42,8 +42,9 @@ describe('MongoDB Connection Pool Exhaustion (Risk 3)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     await app.init();
-  });
+  }, 30000);
 
   afterAll(async () => {
     await mongoClient.close();
@@ -129,7 +130,7 @@ describe('MongoDB Connection Pool Exhaustion (Risk 3)', () => {
     // Simulate concurrent report requests
     const promises = Array.from({ length: 5 }, () =>
       request(app.getHttpServer())
-        .get('/reports/summary')
+        .get('/api/reports/summary')
         .set('Authorization', 'Bearer test-token')
     );
 

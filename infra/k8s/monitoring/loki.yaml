@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: loki
-  namespace: cnpm-food-delivery
+  namespace: monitoring
 spec:
   replicas: 1
   selector:
@@ -39,7 +39,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: loki
-  namespace: cnpm-food-delivery
+  namespace: monitoring
 spec:
   type: ClusterIP
   ports:
@@ -53,7 +53,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: promtail-config
-  namespace: cnpm-food-delivery
+  namespace: monitoring
 data:
   promtail.yaml: |
     server:
@@ -64,15 +64,15 @@ data:
       filename: /tmp/positions.yaml
 
     clients:
-      - url: http://loki:3100/loki/api/v1/push
+      - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
 
     scrape_configs:
       - job_name: kubernetes-pods
         kubernetes_sd_configs:
           - role: pod
+            # Empty names list = scrape logs from all namespaces
             namespaces:
-              names:
-                - cnpm-food-delivery
+              names: []
         relabel_configs:
           - source_labels: [__meta_kubernetes_pod_name]
             target_label: pod
@@ -85,7 +85,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: promtail
-  namespace: cnpm-food-delivery
+  namespace: monitoring
 spec:
   selector:
     matchLabels:
@@ -131,7 +131,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: promtail
-  namespace: cnpm-food-delivery
+  namespace: monitoring
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -145,6 +145,7 @@ rules:
   - services
   - endpoints
   - pods
+  - namespaces
   verbs: ["get", "watch", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -158,4 +159,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: promtail
-  namespace: cnpm-food-delivery
+  namespace: monitoring

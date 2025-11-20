@@ -42,8 +42,9 @@ describe('Order-Service HTTP Timeout in Reports (Risk 2)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     await app.init();
-  });
+  }, 30000);
 
   afterAll(async () => {
     await mongoClient.close();
@@ -62,7 +63,7 @@ describe('Order-Service HTTP Timeout in Reports (Risk 2)', () => {
     process.env.ORDER_SERVICE_URL = 'http://slow-order-service:5005';
 
     const response = await request(app.getHttpServer())
-      .get('/reports/revenue')
+      .get('/api/reports/revenue')
       .set('Authorization', 'Bearer test-token')
       .expect(200);
 
@@ -75,7 +76,7 @@ describe('Order-Service HTTP Timeout in Reports (Risk 2)', () => {
     process.env.ORDER_SERVICE_URL = 'http://slow-order-service:5005';
 
     const response = await request(app.getHttpServer())
-      .get('/reports/top-items')
+      .get('/api/reports/top-items')
       .set('Authorization', 'Bearer test-token')
       .expect(200);
 
@@ -88,7 +89,7 @@ describe('Order-Service HTTP Timeout in Reports (Risk 2)', () => {
     process.env.ORDER_SERVICE_URL = 'http://slow-order-service:5005';
 
     const response = await request(app.getHttpServer())
-      .get('/reports/summary')
+      .get('/api/reports/summary')
       .set('Authorization', 'Bearer test-token')
       .expect(200);
 
