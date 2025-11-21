@@ -6,8 +6,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 jest.setTimeout(30000);
-process.env.JWT_SECRET = 'test-secret';
-process.env.MONGO_RESTAURANT_URL = 'mongodb://restaurant:restaurant123@localhost:28017/Restaurant';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
+process.env.MONGO_RESTAURANT_URL = process.env.MONGO_RESTAURANT_URL || 'mongodb://restaurant:restaurant123@localhost:28017/Restaurant';
 
 import { AppModule } from '../../src/app.module';
 import { JwtAuthGuard } from '../../src/common/guards/jwt-auth.guard';
@@ -36,7 +36,7 @@ describe('File Upload Path Resolution Failure (Risk 4)', () => {
   let mongoClient: MongoClient;
 
   beforeAll(async () => {
-    mongoClient = new MongoClient('mongodb://restaurant:restaurant123@localhost:28017/Restaurant');
+    mongoClient = new MongoClient(process.env.MONGO_RESTAURANT_URL!);
     await mongoClient.connect();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({

@@ -94,6 +94,9 @@ jobs:
 
       - name: Run Integration Tests
         working-directory: backend/restaurant-service
+        env:
+          MONGO_RESTAURANT_URL: mongodb://restaurant:restaurant123@localhost:28017/Restaurant
+          JWT_SECRET: test-secret
         run: npm run test:integration
         continue-on-error: false
 
