@@ -53,7 +53,9 @@ describe('Order Status Filtering Logic Inconsistency (Risk 7)', () => {
 
   afterAll(async () => {
     await mongoClient.close();
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   beforeEach(async () => {
