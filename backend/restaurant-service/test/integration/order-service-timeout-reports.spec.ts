@@ -53,7 +53,9 @@ describe('Order-Service HTTP Timeout in Reports (Risk 2)', () => {
 
   afterAll(async () => {
     await mongoClient.close();
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   beforeEach(async () => {

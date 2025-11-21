@@ -53,7 +53,9 @@ describe('Auth-Service Dependency Failure (Risk 1)', () => {
 
   afterAll(async () => {
     await mongoClient.close();
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   beforeEach(async () => {

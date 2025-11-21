@@ -53,7 +53,9 @@ describe('MongoDB Connection Pool Exhaustion (Risk 3)', () => {
 
   afterAll(async () => {
     await mongoClient.close();
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   beforeEach(async () => {

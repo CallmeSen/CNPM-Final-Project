@@ -54,7 +54,9 @@ describe('Food Item Availability Update Without Transaction (Risk 8)', () => {
 
   afterAll(async () => {
     await mongoClient.close();
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   beforeEach(async () => {

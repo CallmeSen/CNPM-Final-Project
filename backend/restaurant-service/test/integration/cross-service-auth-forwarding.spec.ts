@@ -53,7 +53,9 @@ describe('Cross-Service Authorization Header Forwarding (Risk 5)', () => {
 
   afterAll(async () => {
     await mongoClient.close();
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   beforeEach(async () => {

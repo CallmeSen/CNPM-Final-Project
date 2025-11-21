@@ -53,7 +53,9 @@ describe('Review Duplication Prevention Race Condition (Risk 6)', () => {
 
   afterAll(async () => {
     await mongoClient.close();
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   beforeEach(async () => {

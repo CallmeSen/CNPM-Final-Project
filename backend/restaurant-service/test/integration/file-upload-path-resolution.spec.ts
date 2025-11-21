@@ -52,7 +52,9 @@ describe('File Upload Path Resolution Failure (Risk 4)', () => {
 
   afterAll(async () => {
     await mongoClient.close();
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   beforeEach(async () => {
