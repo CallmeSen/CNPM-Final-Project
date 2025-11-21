@@ -28,8 +28,8 @@ describe('Risk 3: WebSocket Broadcast Failure When Clients Disconnect (Integrati
   });
 
   it('should update order status and attempt broadcast even with no clients', async () => {
-    // Add small delay to avoid orderId collision with parallel tests
-    await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+    // Add delay to avoid orderId collision with parallel tests
+    await new Promise(resolve => setTimeout(resolve, 150 + Math.random() * 100));
     
     const customerToken = jwt.sign(
       { id: 'test-customer', role: 'customer' },

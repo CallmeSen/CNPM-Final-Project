@@ -32,6 +32,9 @@ describe('Risk 5: OrderID Collision Due to Timestamp Precision (Integration)', (
   });
 
   it('should generate unique orderIds for concurrent requests', async () => {
+    // Add delay to avoid orderId collision with parallel tests
+    await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 100));
+    
     const customerToken = jwt.sign(
       { id: 'test-customer', role: 'customer' },
       'test-secret',
