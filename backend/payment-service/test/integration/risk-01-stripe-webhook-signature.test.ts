@@ -22,6 +22,11 @@ describe('RISK-01: Stripe webhook signature verification failure (Integration)',
           if (key === 'MONGO_PAY_URL') return 'mongodb://payment:payment123@localhost:28019/Payment';
           if (key === 'STRIPE_WEBHOOK_SECRET') return 'invalid_webhook_secret';
           if (key === 'STRIPE_SECRET_KEY') return process.env.STRIPE_SECRET_KEY || 'sk_test_invalid';
+          if (key === 'RESEND_API_KEY') return 're_test_key_for_testing';
+          if (key === 'TWILIO_ACCOUNT_SID') return 'AC_test_account_sid';
+          if (key === 'TWILIO_AUTH_TOKEN') return 'test_auth_token';
+          if (key === 'TWILIO_PHONE_NUMBER') return '+1234567890';
+          if (key === 'ORDER_SERVICE_URL') return 'http://localhost:5005';
           return null;
         }),
       })
@@ -35,7 +40,9 @@ describe('RISK-01: Stripe webhook signature verification failure (Integration)',
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   it('should return 400 when webhook signature is invalid', async () => {

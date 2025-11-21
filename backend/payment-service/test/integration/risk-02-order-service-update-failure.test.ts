@@ -43,6 +43,10 @@ describe('RISK-02: Order-service update failure after payment success (Integrati
           if (key === 'ORDER_SERVICE_URL') return 'http://localhost:5005'; // Simulate order-service down
           if (key === 'STRIPE_WEBHOOK_SECRET') return 'whsec_test_webhook_secret_for_testing';
           if (key === 'STRIPE_SECRET_KEY') return process.env.STRIPE_SECRET_KEY || 'sk_test_valid';
+          if (key === 'RESEND_API_KEY') return 're_test_key_for_testing';
+          if (key === 'TWILIO_ACCOUNT_SID') return 'AC_test_account_sid';
+          if (key === 'TWILIO_AUTH_TOKEN') return 'test_auth_token';
+          if (key === 'TWILIO_PHONE_NUMBER') return '+1234567890';
           return null;
         }),
       })
@@ -85,7 +89,9 @@ describe('RISK-02: Order-service update failure after payment success (Integrati
 
   afterAll(async () => {
     jest.restoreAllMocks();
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   it('should handle order-service update failure gracefully', async () => {
