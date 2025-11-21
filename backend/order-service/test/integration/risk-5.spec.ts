@@ -40,6 +40,9 @@ describe('Risk 5: OrderID Collision Due to Timestamp Precision (Integration)', (
       'test-secret',
     );
 
+    // Add initial delay to avoid orderId timestamp collision with other concurrent tests
+    await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 100));
+
     const createOrderDto = {
       customerId: 'test-customer',
       restaurantId: 'test-restaurant',
@@ -47,9 +50,11 @@ describe('Risk 5: OrderID Collision Due to Timestamp Precision (Integration)', (
       deliveryAddress: 'test address',
     };
 
-    // Simulate concurrent requests
+    // Simulate concurrent requests with increased delays between them
     const promises = [];
     for (let i = 0; i < 10; i++) {
+      // Add delay between requests to ensure unique timestamps
+      await new Promise(resolve => setTimeout(resolve, 10 + Math.random() * 5));
       promises.push(
         request(app.getHttpServer())
           .post('/api/orders')

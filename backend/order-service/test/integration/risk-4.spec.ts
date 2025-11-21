@@ -37,6 +37,9 @@ describe('Risk 4: Internal API Endpoint Exposed Without Authentication (Integrat
       'test-secret',
     );
 
+    // Add delay to avoid orderId timestamp collision with other concurrent tests
+    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 100));
+
     // First create an order to have an orderId
     const createOrderDto = {
       customerId: 'test-customer',

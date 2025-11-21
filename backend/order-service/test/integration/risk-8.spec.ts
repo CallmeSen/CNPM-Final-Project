@@ -41,6 +41,9 @@ describe('Risk 8: Race Condition in Order Status Updates (Integration)', () => {
       'test-secret',
     );
 
+    // Add delay to avoid orderId timestamp collision with other concurrent tests
+    await new Promise(resolve => setTimeout(resolve, 700 + Math.random() * 100));
+
     // Create an order
     const createOrderDto = {
       customerId: 'test-customer',

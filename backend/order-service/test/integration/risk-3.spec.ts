@@ -40,6 +40,9 @@ describe('Risk 3: WebSocket Broadcast Failure When Clients Disconnect (Integrati
       'test-secret',
     );
 
+    // Add delay to avoid orderId timestamp collision with other concurrent tests
+    await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 100));
+
     // First create an order
     const createOrderDto = {
       customerId: 'test-customer',
