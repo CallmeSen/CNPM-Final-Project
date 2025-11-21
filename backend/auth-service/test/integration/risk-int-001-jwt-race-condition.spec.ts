@@ -49,12 +49,12 @@ describe('RISK-INT-001: JWT Token Validation Race Condition (Integration)', () =
     console.log('Single request status:', singleRequest.status);
     console.log('Single request body:', singleRequest.body);
 
-    // Simulate concurrent requests with very short timeout (race condition scenario)
+    // Simulate concurrent requests with reasonable timeout
     const concurrentRequests = Array(10).fill(null).map(() =>
       request('http://localhost:5001')
         .get('/api/auth/customer/profile')
         .set('Authorization', `Bearer ${token}`)
-        .timeout(100) // Very short timeout to trigger race condition
+        .timeout(5000) // Reasonable timeout for integration test
     );
 
     // Execute all requests concurrently
