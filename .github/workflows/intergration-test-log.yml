@@ -14,12 +14,8 @@ on:
       - source
     paths:
       - 'backend/**'
-  # workflow_run:
-  #   workflows:
-  #     - backend-ci
-  #   types:
-  #     - completed
-#hâhahahahahah
+  workflow_dispatch:
+
 jobs:
   setup-infrastructure:
     name: Start Docker Compose Stack
@@ -249,10 +245,6 @@ jobs:
       - order-integration-test
       - payment-integration-test
     if: always()
-    env:
-      LOKI_URL: ${{ secrets.LOKI_URL }}
-      LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
-      LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
     steps:
       - name: Download All Test Logs
         if: always()
@@ -264,6 +256,9 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LOKI_URL: ${{ secrets.LOKI_URL }}
+          LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
+          LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
         run: |
           set -euo pipefail
           
