@@ -70,22 +70,35 @@ jobs:
         working-directory: backend/auth-service
         shell: powershell
         run: |
+          $ErrorActionPreference = 'Continue'
           Write-Host "Starting Auth Service Integration Tests..." -ForegroundColor Cyan
           $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
           Write-Host "[$timestamp] Test execution started" -ForegroundColor Green
           
-          npm run test:integration 2>&1 | Tee-Object -FilePath "auth-integration-test.log"
-          $exitCode = $LASTEXITCODE
-          
-          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-          if ($exitCode -eq 0) {
-            Write-Host "[$timestamp] Auth tests completed successfully" -ForegroundColor Green
-          } else {
-            Write-Host "[$timestamp] Auth tests failed with exit code: $exitCode" -ForegroundColor Red
+          # Run tests and capture all output
+          $logFile = "auth-integration-test.log"
+          npm run test:integration *>&1 | ForEach-Object {
+            $_ | Out-File -FilePath $logFile -Append -Encoding utf8
+            Write-Host $_
           }
           
-          exit $exitCode
-        continue-on-error: false
+          $exitCode = $LASTEXITCODE
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          if ($exitCode -eq 0) {
+            $status = "PASSED"
+            $color = "Green"
+          } else {
+            $status = "FAILED"
+            $color = "Red"
+          }
+          
+          $statusMsg = "[$timestamp] Auth tests $status (exit code: $exitCode)"
+          Write-Host $statusMsg -ForegroundColor $color
+          $statusMsg | Out-File -FilePath $logFile -Append -Encoding utf8
+          
+          if ($exitCode -ne 0) { exit $exitCode }
+        continue-on-error: true
 
       - name: Upload Test Logs
         if: always()
@@ -94,6 +107,107 @@ jobs:
           name: auth-integration-logs
           path: backend/auth-service/auth-integration-test.log
           retention-days: 7
+
+      - name: Push Auth Logs to Loki
+        if: always()
+        shell: bash
+        working-directory: backend/auth-service
+        env:
+          LOKI_URL: ${{ secrets.LOKI_URL }}
+          LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
+          LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
+        run: |
+          if [ -z "$LOKI_URL" ]; then
+            echo "⚠️  LOKI_URL not configured, skipping log export"
+            exit 0
+          fi
+          
+          if [ ! -f "auth-integration-test.log" ]; then
+            echo "⚠️  Log file not found"
+            exit 0
+          fi
+          
+          echo "📤 Pushing Auth Service logs to Loki..."
+          
+          python3 - <<'EOF'
+          import json
+          import os
+          import time
+          import sys
+          from pathlib import Path
+          
+          log_file = "auth-integration-test.log"
+          if not Path(log_file).exists():
+              print(f"Log file {log_file} not found")
+              sys.exit(0)
+          
+          # Determine test status from log
+          test_status = "unknown"
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+              content = f.read()
+              if "PASSED" in content:
+                  test_status = "passed"
+              elif "FAILED" in content:
+                  test_status = "failed"
+          
+          labels = {
+              "job": "integration-tests",
+              "service": "auth",
+              "repo": os.environ.get("GITHUB_REPOSITORY", "unknown"),
+              "workflow": os.environ.get("GITHUB_WORKFLOW", "unknown"),
+              "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
+              "run_number": os.environ.get("GITHUB_RUN_NUMBER", "unknown"),
+              "branch": os.environ.get("GITHUB_REF_NAME", "unknown"),
+              "commit": os.environ.get("GITHUB_SHA", "unknown")[:7],
+              "test_status": test_status,
+              "log_type": "integration-test",
+              "environment": "ci"
+          }
+          
+          values = []
+          base_ts = int(time.time() * 1e9)
+          
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+              for idx, line in enumerate(f):
+                  ts = str(base_ts + idx * 1000)
+                  values.append([ts, line.rstrip()])
+          
+          payload = {
+              "streams": [{
+                  "stream": labels,
+                  "values": values
+              }]
+          }
+          
+          with open("loki-payload.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f)
+          
+          print(f"✓ Prepared {len(values)} log lines for Loki (status: {test_status})")
+          EOF
+          
+          if [ ! -f "loki-payload.json" ]; then
+            echo "❌ Failed to generate payload"
+            exit 1
+          fi
+          
+          CURL_AUTH=""
+          if [ -n "${LOKI_USERNAME:-}" ]; then
+            CURL_AUTH="--user ${LOKI_USERNAME}:${LOKI_PASSWORD}"
+          fi
+          
+          response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
+            -H "Content-Type: application/json" \
+            "${LOKI_URL%/}/loki/api/v1/push" \
+            --data-binary @loki-payload.json)
+          
+          http_code=$(echo "$response" | tail -n1)
+          
+          if [ "$http_code" = "204" ] || [ "$http_code" = "200" ]; then
+            echo "✅ Successfully pushed Auth logs to Loki (HTTP $http_code)"
+          else
+            echo "❌ Failed to push logs (HTTP $http_code)"
+            exit 1
+          fi
 
   restaurant-integration-test:
     name: Restaurant Service Integration Test
@@ -119,22 +233,34 @@ jobs:
           MONGO_RESTAURANT_URL: mongodb://restaurant:restaurant123@localhost:28017/Restaurant
           JWT_SECRET: test-secret
         run: |
+          $ErrorActionPreference = 'Continue'
           Write-Host "Starting Restaurant Service Integration Tests..." -ForegroundColor Cyan
           $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
           Write-Host "[$timestamp] Test execution started" -ForegroundColor Green
           
-          npm run test:integration 2>&1 | Tee-Object -FilePath "restaurant-integration-test.log"
-          $exitCode = $LASTEXITCODE
-          
-          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-          if ($exitCode -eq 0) {
-            Write-Host "[$timestamp] Restaurant tests completed successfully" -ForegroundColor Green
-          } else {
-            Write-Host "[$timestamp] Restaurant tests failed with exit code: $exitCode" -ForegroundColor Red
+          $logFile = "restaurant-integration-test.log"
+          npm run test:integration *>&1 | ForEach-Object {
+            $_ | Out-File -FilePath $logFile -Append -Encoding utf8
+            Write-Host $_
           }
           
-          exit $exitCode
-        continue-on-error: false
+          $exitCode = $LASTEXITCODE
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          if ($exitCode -eq 0) {
+            $status = "PASSED"
+            $color = "Green"
+          } else {
+            $status = "FAILED"
+            $color = "Red"
+          }
+          
+          $statusMsg = "[$timestamp] Restaurant tests $status (exit code: $exitCode)"
+          Write-Host $statusMsg -ForegroundColor $color
+          $statusMsg | Out-File -FilePath $logFile -Append -Encoding utf8
+          
+          if ($exitCode -ne 0) { exit $exitCode }
+        continue-on-error: true
 
       - name: Upload Test Logs
         if: always()
@@ -143,6 +269,106 @@ jobs:
           name: restaurant-integration-logs
           path: backend/restaurant-service/restaurant-integration-test.log
           retention-days: 7
+
+      - name: Push Restaurant Logs to Loki
+        if: always()
+        shell: bash
+        working-directory: backend/restaurant-service
+        env:
+          LOKI_URL: ${{ secrets.LOKI_URL }}
+          LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
+          LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
+        run: |
+          if [ -z "$LOKI_URL" ]; then
+            echo "⚠️  LOKI_URL not configured, skipping log export"
+            exit 0
+          fi
+          
+          if [ ! -f "restaurant-integration-test.log" ]; then
+            echo "⚠️  Log file not found"
+            exit 0
+          fi
+          
+          echo "📤 Pushing Restaurant Service logs to Loki..."
+          
+          python3 - <<'EOF'
+          import json
+          import os
+          import time
+          import sys
+          from pathlib import Path
+          
+          log_file = "restaurant-integration-test.log"
+          if not Path(log_file).exists():
+              print(f"Log file {log_file} not found")
+              sys.exit(0)
+          
+          test_status = "unknown"
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+              content = f.read()
+              if "PASSED" in content:
+                  test_status = "passed"
+              elif "FAILED" in content:
+                  test_status = "failed"
+          
+          labels = {
+              "job": "integration-tests",
+              "service": "restaurant",
+              "repo": os.environ.get("GITHUB_REPOSITORY", "unknown"),
+              "workflow": os.environ.get("GITHUB_WORKFLOW", "unknown"),
+              "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
+              "run_number": os.environ.get("GITHUB_RUN_NUMBER", "unknown"),
+              "branch": os.environ.get("GITHUB_REF_NAME", "unknown"),
+              "commit": os.environ.get("GITHUB_SHA", "unknown")[:7],
+              "test_status": test_status,
+              "log_type": "integration-test",
+              "environment": "ci"
+          }
+          
+          values = []
+          base_ts = int(time.time() * 1e9)
+          
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+              for idx, line in enumerate(f):
+                  ts = str(base_ts + idx * 1000)
+                  values.append([ts, line.rstrip()])
+          
+          payload = {
+              "streams": [{
+                  "stream": labels,
+                  "values": values
+              }]
+          }
+          
+          with open("loki-payload.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f)
+          
+          print(f"✓ Prepared {len(values)} log lines for Loki (status: {test_status})")
+          EOF
+          
+          if [ ! -f "loki-payload.json" ]; then
+            echo "❌ Failed to generate payload"
+            exit 1
+          fi
+          
+          CURL_AUTH=""
+          if [ -n "${LOKI_USERNAME:-}" ]; then
+            CURL_AUTH="--user ${LOKI_USERNAME}:${LOKI_PASSWORD}"
+          fi
+          
+          response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
+            -H "Content-Type: application/json" \
+            "${LOKI_URL%/}/loki/api/v1/push" \
+            --data-binary @loki-payload.json)
+          
+          http_code=$(echo "$response" | tail -n1)
+          
+          if [ "$http_code" = "204" ] || [ "$http_code" = "200" ]; then
+            echo "✅ Successfully pushed Restaurant logs to Loki (HTTP $http_code)"
+          else
+            echo "❌ Failed to push logs (HTTP $http_code)"
+            exit 1
+          fi
 
   order-integration-test:
     name: Order Service Integration Test
@@ -165,22 +391,34 @@ jobs:
         working-directory: backend/order-service
         shell: powershell
         run: |
+          $ErrorActionPreference = 'Continue'
           Write-Host "Starting Order Service Integration Tests..." -ForegroundColor Cyan
           $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
           Write-Host "[$timestamp] Test execution started" -ForegroundColor Green
           
-          npm run test:integration 2>&1 | Tee-Object -FilePath "order-integration-test.log"
-          $exitCode = $LASTEXITCODE
-          
-          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-          if ($exitCode -eq 0) {
-            Write-Host "[$timestamp] Order tests completed successfully" -ForegroundColor Green
-          } else {
-            Write-Host "[$timestamp] Order tests failed with exit code: $exitCode" -ForegroundColor Red
+          $logFile = "order-integration-test.log"
+          npm run test:integration *>&1 | ForEach-Object {
+            $_ | Out-File -FilePath $logFile -Append -Encoding utf8
+            Write-Host $_
           }
           
-          exit $exitCode
-        continue-on-error: false
+          $exitCode = $LASTEXITCODE
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          if ($exitCode -eq 0) {
+            $status = "PASSED"
+            $color = "Green"
+          } else {
+            $status = "FAILED"
+            $color = "Red"
+          }
+          
+          $statusMsg = "[$timestamp] Order tests $status (exit code: $exitCode)"
+          Write-Host $statusMsg -ForegroundColor $color
+          $statusMsg | Out-File -FilePath $logFile -Append -Encoding utf8
+          
+          if ($exitCode -ne 0) { exit $exitCode }
+        continue-on-error: true
 
       - name: Upload Test Logs
         if: always()
@@ -189,6 +427,106 @@ jobs:
           name: order-integration-logs
           path: backend/order-service/order-integration-test.log
           retention-days: 7
+
+      - name: Push Order Logs to Loki
+        if: always()
+        shell: bash
+        working-directory: backend/order-service
+        env:
+          LOKI_URL: ${{ secrets.LOKI_URL }}
+          LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
+          LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
+        run: |
+          if [ -z "$LOKI_URL" ]; then
+            echo "⚠️  LOKI_URL not configured, skipping log export"
+            exit 0
+          fi
+          
+          if [ ! -f "order-integration-test.log" ]; then
+            echo "⚠️  Log file not found"
+            exit 0
+          fi
+          
+          echo "📤 Pushing Order Service logs to Loki..."
+          
+          python3 - <<'EOF'
+          import json
+          import os
+          import time
+          import sys
+          from pathlib import Path
+          
+          log_file = "order-integration-test.log"
+          if not Path(log_file).exists():
+              print(f"Log file {log_file} not found")
+              sys.exit(0)
+          
+          test_status = "unknown"
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+              content = f.read()
+              if "PASSED" in content:
+                  test_status = "passed"
+              elif "FAILED" in content:
+                  test_status = "failed"
+          
+          labels = {
+              "job": "integration-tests",
+              "service": "order",
+              "repo": os.environ.get("GITHUB_REPOSITORY", "unknown"),
+              "workflow": os.environ.get("GITHUB_WORKFLOW", "unknown"),
+              "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
+              "run_number": os.environ.get("GITHUB_RUN_NUMBER", "unknown"),
+              "branch": os.environ.get("GITHUB_REF_NAME", "unknown"),
+              "commit": os.environ.get("GITHUB_SHA", "unknown")[:7],
+              "test_status": test_status,
+              "log_type": "integration-test",
+              "environment": "ci"
+          }
+          
+          values = []
+          base_ts = int(time.time() * 1e9)
+          
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+              for idx, line in enumerate(f):
+                  ts = str(base_ts + idx * 1000)
+                  values.append([ts, line.rstrip()])
+          
+          payload = {
+              "streams": [{
+                  "stream": labels,
+                  "values": values
+              }]
+          }
+          
+          with open("loki-payload.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f)
+          
+          print(f"✓ Prepared {len(values)} log lines for Loki (status: {test_status})")
+          EOF
+          
+          if [ ! -f "loki-payload.json" ]; then
+            echo "❌ Failed to generate payload"
+            exit 1
+          fi
+          
+          CURL_AUTH=""
+          if [ -n "${LOKI_USERNAME:-}" ]; then
+            CURL_AUTH="--user ${LOKI_USERNAME}:${LOKI_PASSWORD}"
+          fi
+          
+          response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
+            -H "Content-Type: application/json" \
+            "${LOKI_URL%/}/loki/api/v1/push" \
+            --data-binary @loki-payload.json)
+          
+          http_code=$(echo "$response" | tail -n1)
+          
+          if [ "$http_code" = "204" ] || [ "$http_code" = "200" ]; then
+            echo "✅ Successfully pushed Order logs to Loki (HTTP $http_code)"
+          else
+            echo "❌ Failed to push logs (HTTP $http_code)"
+            exit 1
+          fi
 
   payment-integration-test:
     name: Payment Service Integration Test
@@ -211,22 +549,34 @@ jobs:
         working-directory: backend/payment-service
         shell: powershell
         run: |
+          $ErrorActionPreference = 'Continue'
           Write-Host "Starting Payment Service Integration Tests..." -ForegroundColor Cyan
           $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
           Write-Host "[$timestamp] Test execution started" -ForegroundColor Green
           
-          npm run test:integration 2>&1 | Tee-Object -FilePath "payment-integration-test.log"
-          $exitCode = $LASTEXITCODE
-          
-          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-          if ($exitCode -eq 0) {
-            Write-Host "[$timestamp] Payment tests completed successfully" -ForegroundColor Green
-          } else {
-            Write-Host "[$timestamp] Payment tests failed with exit code: $exitCode" -ForegroundColor Red
+          $logFile = "payment-integration-test.log"
+          npm run test:integration *>&1 | ForEach-Object {
+            $_ | Out-File -FilePath $logFile -Append -Encoding utf8
+            Write-Host $_
           }
           
-          exit $exitCode
-        continue-on-error: false
+          $exitCode = $LASTEXITCODE
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          if ($exitCode -eq 0) {
+            $status = "PASSED"
+            $color = "Green"
+          } else {
+            $status = "FAILED"
+            $color = "Red"
+          }
+          
+          $statusMsg = "[$timestamp] Payment tests $status (exit code: $exitCode)"
+          Write-Host $statusMsg -ForegroundColor $color
+          $statusMsg | Out-File -FilePath $logFile -Append -Encoding utf8
+          
+          if ($exitCode -ne 0) { exit $exitCode }
+        continue-on-error: true
 
       - name: Upload Test Logs
         if: always()
@@ -236,168 +586,102 @@ jobs:
           path: backend/payment-service/payment-integration-test.log
           retention-days: 7
 
-  export-logs:
-    name: Export Integration Logs to Loki
-    runs-on: ubuntu-latest
-    needs:
-      - auth-integration-test
-      - restaurant-integration-test
-      - order-integration-test
-      - payment-integration-test
-    if: always()
-    steps:
-      - name: Download All Test Logs
+      - name: Push Payment Logs to Loki
         if: always()
-        uses: actions/download-artifact@v4
-        with:
-          path: test-logs/
-
-      - name: Prepare and Push Logs to Loki
-        if: always()
+        shell: bash
+        working-directory: backend/payment-service
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LOKI_URL: ${{ secrets.LOKI_URL }}
           LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
           LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
         run: |
-          set -euo pipefail
-          
-          echo "=== Collected Test Logs ==="
-          find test-logs -type f -name "*.log" || echo "No log files found"
-          
           if [ -z "$LOKI_URL" ]; then
-            echo "LOKI_URL not configured, skipping log export"
+            echo "⚠️  LOKI_URL not configured, skipping log export"
             exit 0
           fi
           
-          # Collect test artifact logs
-          mkdir -p logs
-          for log in test-logs/*/*.log; do
-            if [ -f "$log" ]; then
-              service_name=$(basename $(dirname "$log") | sed 's/-integration-logs//')
-              cp "$log" "logs/${service_name}-test.log"
-              echo "Collected: $log -> logs/${service_name}-test.log"
-            fi
-          done
-          
-          # Also fetch GitHub Actions job logs
-          echo "Fetching GitHub Actions job logs for run ${GITHUB_RUN_ID}"
-          gh api repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs --paginate --jq '.jobs[] | "\(.id)|\(.name)"' > logs/jobs.txt || true
-
-          if [ -s logs/jobs.txt ]; then
-            while IFS="|" read -r job_id job_name; do
-              echo "Downloading logs for job ${job_id} (${job_name})"
-              gh api repos/${GITHUB_REPOSITORY}/actions/jobs/${job_id}/logs > logs/${job_id}.zip 2>/dev/null || true
-              if [ -f logs/${job_id}.zip ]; then
-                unzip -p logs/${job_id}.zip > logs/${job_id}.log 2>/dev/null || true
-                echo "${job_id}|${job_name}" >> logs/job_meta.txt
-              fi
-            done < logs/jobs.txt
+          if [ ! -f "payment-integration-test.log" ]; then
+            echo "⚠️  Log file not found"
+            exit 0
           fi
-
-          # Generate Loki payload
+          
+          echo "📤 Pushing Payment Service logs to Loki..."
+          
           python3 - <<'EOF'
           import json
           import os
           import time
+          import sys
           from pathlib import Path
-          from datetime import datetime
-
-          repo = os.environ.get("GITHUB_REPOSITORY", "unknown")
-          workflow = os.environ.get("GITHUB_WORKFLOW", "unknown")
-          workflow_ref = os.environ.get("GITHUB_WORKFLOW_REF", "unknown")
-          run_id = os.environ.get("GITHUB_RUN_ID", "unknown")
-          run_number = os.environ.get("GITHUB_RUN_NUMBER", "unknown")
-          branch = os.environ.get("GITHUB_REF_NAME", "unknown")
-          commit = os.environ.get("GITHUB_SHA", "unknown")[:7]
-
-          # Load job metadata
-          meta = {}
-          meta_path = Path("logs/job_meta.txt")
-          if meta_path.exists():
-              with meta_path.open() as f:
-                  for line in f:
-                      if "|" in line:
-                          job_id, job_name = line.strip().split("|", 1)
-                          meta[job_id] = job_name
-
-          streams = []
           
-          # Process all log files
-          for log_path in Path("logs").glob("*.log"):
-              job_id = log_path.stem
-              job_name = meta.get(job_id, job_id)
-              
-              # Determine if this is a test log or workflow log
-              log_type = "test" if "-test" in str(log_path) else "workflow"
-              service = job_name.replace("-integration-logs", "").replace(" Service Integration Test", "").strip()
-              
-              labels = {
-                  "job": "integration-tests",
-                  "repo": repo,
-                  "workflow": workflow,
-                  "workflow_ref": workflow_ref,
-                  "run_id": run_id,
-                  "run_number": run_number,
-                  "branch": branch,
-                  "commit": commit,
-                  "job_id": job_id,
-                  "job_name": job_name,
-                  "log_type": log_type,
-                  "service": service,
-                  "environment": "ci"
-              }
-
-              values = []
-              base_ts = int(time.time() * 1e9)
-              
-              try:
-                  with log_path.open(encoding='utf-8', errors='ignore') as f:
-                      for idx, line in enumerate(f):
-                          ts = str(base_ts + idx * 1000)  # 1ms apart
-                          values.append([ts, line.rstrip()])
-              except Exception as e:
-                  print(f"Error reading {log_path}: {e}")
-                  continue
-
-              if values:
-                  streams.append({"stream": labels, "values": values})
-                  print(f"Added {len(values)} log lines from {log_path.name} (service: {service})")
-
-          if streams:
-              payload = {"streams": streams}
-              with open("payload.json", "w", encoding="utf-8") as f:
-                  json.dump(payload, f, indent=2)
-              print(f"\n=== Prepared {len(streams)} log streams for Loki ===")
-          else:
-              Path("payload.json").write_text("{}", encoding="utf-8")
-              print("No log streams to export")
+          log_file = "payment-integration-test.log"
+          if not Path(log_file).exists():
+              print(f"Log file {log_file} not found")
+              sys.exit(0)
+          
+          test_status = "unknown"
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+              content = f.read()
+              if "PASSED" in content:
+                  test_status = "passed"
+              elif "FAILED" in content:
+                  test_status = "failed"
+          
+          labels = {
+              "job": "integration-tests",
+              "service": "payment",
+              "repo": os.environ.get("GITHUB_REPOSITORY", "unknown"),
+              "workflow": os.environ.get("GITHUB_WORKFLOW", "unknown"),
+              "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
+              "run_number": os.environ.get("GITHUB_RUN_NUMBER", "unknown"),
+              "branch": os.environ.get("GITHUB_REF_NAME", "unknown"),
+              "commit": os.environ.get("GITHUB_SHA", "unknown")[:7],
+              "test_status": test_status,
+              "log_type": "integration-test",
+              "environment": "ci"
+          }
+          
+          values = []
+          base_ts = int(time.time() * 1e9)
+          
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+              for idx, line in enumerate(f):
+                  ts = str(base_ts + idx * 1000)
+                  values.append([ts, line.rstrip()])
+          
+          payload = {
+              "streams": [{
+                  "stream": labels,
+                  "values": values
+              }]
+          }
+          
+          with open("loki-payload.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f)
+          
+          print(f"✓ Prepared {len(values)} log lines for Loki (status: {test_status})")
           EOF
-
-          # Push to Loki
-          if [ ! -s payload.json ] || [ "$(cat payload.json)" = "{}" ]; then
-            echo "No log data to push to Loki"
-            exit 0
+          
+          if [ ! -f "loki-payload.json" ]; then
+            echo "❌ Failed to generate payload"
+            exit 1
           fi
-
+          
           CURL_AUTH=""
           if [ -n "${LOKI_USERNAME:-}" ]; then
             CURL_AUTH="--user ${LOKI_USERNAME}:${LOKI_PASSWORD}"
           fi
-
-          echo "Pushing logs to Loki at ${LOKI_URL}"
+          
           response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
             -H "Content-Type: application/json" \
             "${LOKI_URL%/}/loki/api/v1/push" \
-            --data-binary "@payload.json")
+            --data-binary @loki-payload.json)
           
           http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | head -n-1)
           
           if [ "$http_code" = "204" ] || [ "$http_code" = "200" ]; then
-            echo "✓ Successfully pushed logs to Loki (HTTP $http_code)"
+            echo "✅ Successfully pushed Payment logs to Loki (HTTP $http_code)"
           else
-            echo "✗ Failed to push logs to Loki (HTTP $http_code)"
-            echo "Response: $body"
+            echo "❌ Failed to push logs (HTTP $http_code)"
             exit 1
           fi
