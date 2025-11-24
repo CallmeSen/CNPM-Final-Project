@@ -197,7 +197,7 @@ jobs:
           
           response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
             -H "Content-Type: application/json" \
-            "${LOKI_URL%/}/loki/api/v1/push" \
+            "${LOKI_URL}" \
             --data-binary @loki-payload.json)
           
           http_code=$(echo "$response" | tail -n1)
@@ -358,7 +358,7 @@ jobs:
           
           response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
             -H "Content-Type: application/json" \
-            "${LOKI_URL%/}/loki/api/v1/push" \
+            "${LOKI_URL}" \
             --data-binary @loki-payload.json)
           
           http_code=$(echo "$response" | tail -n1)
@@ -516,7 +516,7 @@ jobs:
           
           response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
             -H "Content-Type: application/json" \
-            "${LOKI_URL%/}/loki/api/v1/push" \
+            "${LOKI_URL}" \
             --data-binary @loki-payload.json)
           
           http_code=$(echo "$response" | tail -n1)
@@ -674,7 +674,7 @@ jobs:
           
           response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
             -H "Content-Type: application/json" \
-            "${LOKI_URL%/}/loki/api/v1/push" \
+            "${LOKI_URL}" \
             --data-binary @loki-payload.json)
           
           http_code=$(echo "$response" | tail -n1)
