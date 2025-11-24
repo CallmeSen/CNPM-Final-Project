@@ -148,17 +148,21 @@ jobs:
             exit 1
           }
           
-          # Prepare curl authentication
-          $curlAuth = @()
-          if ($env:LOKI_USERNAME) {
-            $curlAuth = @("-u", "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}")
+          # Prepare curl command
+          if ($env:LOKI_USERNAME -and $env:LOKI_PASSWORD) {
+            Write-Host "Using basic authentication" -ForegroundColor Cyan
+            $response = curl.exe -sS -w "`n%{http_code}" -X POST `
+              -u "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}" `
+              -H "Content-Type: application/json" `
+              $env:LOKI_URL `
+              --data-binary "@loki-payload.json" 2>&1
+          } else {
+            Write-Host "No authentication (LOKI_USERNAME not set)" -ForegroundColor Yellow
+            $response = curl.exe -sS -w "`n%{http_code}" -X POST `
+              -H "Content-Type: application/json" `
+              $env:LOKI_URL `
+              --data-binary "@loki-payload.json" 2>&1
           }
-          
-          # Push to Loki
-          $response = curl.exe -sS -w "`n%{http_code}" -X POST @curlAuth `
-            -H "Content-Type: application/json" `
-            $env:LOKI_URL `
-            --data-binary "@loki-payload.json" 2>&1
           
           $lines = $response -split "`n"
           $httpCode = $lines[-1]
@@ -271,15 +275,20 @@ jobs:
             exit 1
           }
           
-          $curlAuth = @()
-          if ($env:LOKI_USERNAME) {
-            $curlAuth = @("-u", "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}")
+          if ($env:LOKI_USERNAME -and $env:LOKI_PASSWORD) {
+            Write-Host "Using basic authentication" -ForegroundColor Cyan
+            $response = curl.exe -sS -w "`n%{http_code}" -X POST `
+              -u "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}" `
+              -H "Content-Type: application/json" `
+              $env:LOKI_URL `
+              --data-binary "@loki-payload.json" 2>&1
+          } else {
+            Write-Host "No authentication (LOKI_USERNAME not set)" -ForegroundColor Yellow
+            $response = curl.exe -sS -w "`n%{http_code}" -X POST `
+              -H "Content-Type: application/json" `
+              $env:LOKI_URL `
+              --data-binary "@loki-payload.json" 2>&1
           }
-          
-          $response = curl.exe -sS -w "`n%{http_code}" -X POST @curlAuth `
-            -H "Content-Type: application/json" `
-            $env:LOKI_URL `
-            --data-binary "@loki-payload.json" 2>&1
           
           $lines = $response -split "`n"
           $httpCode = $lines[-1]
@@ -388,15 +397,20 @@ jobs:
             exit 1
           }
           
-          $curlAuth = @()
-          if ($env:LOKI_USERNAME) {
-            $curlAuth = @("-u", "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}")
+          if ($env:LOKI_USERNAME -and $env:LOKI_PASSWORD) {
+            Write-Host "Using basic authentication" -ForegroundColor Cyan
+            $response = curl.exe -sS -w "`n%{http_code}" -X POST `
+              -u "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}" `
+              -H "Content-Type: application/json" `
+              $env:LOKI_URL `
+              --data-binary "@loki-payload.json" 2>&1
+          } else {
+            Write-Host "No authentication (LOKI_USERNAME not set)" -ForegroundColor Yellow
+            $response = curl.exe -sS -w "`n%{http_code}" -X POST `
+              -H "Content-Type: application/json" `
+              $env:LOKI_URL `
+              --data-binary "@loki-payload.json" 2>&1
           }
-          
-          $response = curl.exe -sS -w "`n%{http_code}" -X POST @curlAuth `
-            -H "Content-Type: application/json" `
-            $env:LOKI_URL `
-            --data-binary "@loki-payload.json" 2>&1
           
           $lines = $response -split "`n"
           $httpCode = $lines[-1]
@@ -505,15 +519,20 @@ jobs:
             exit 1
           }
           
-          $curlAuth = @()
-          if ($env:LOKI_USERNAME) {
-            $curlAuth = @("-u", "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}")
+          if ($env:LOKI_USERNAME -and $env:LOKI_PASSWORD) {
+            Write-Host "Using basic authentication" -ForegroundColor Cyan
+            $response = curl.exe -sS -w "`n%{http_code}" -X POST `
+              -u "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}" `
+              -H "Content-Type: application/json" `
+              $env:LOKI_URL `
+              --data-binary "@loki-payload.json" 2>&1
+          } else {
+            Write-Host "No authentication (LOKI_USERNAME not set)" -ForegroundColor Yellow
+            $response = curl.exe -sS -w "`n%{http_code}" -X POST `
+              -H "Content-Type: application/json" `
+              $env:LOKI_URL `
+              --data-binary "@loki-payload.json" 2>&1
           }
-          
-          $response = curl.exe -sS -w "`n%{http_code}" -X POST @curlAuth `
-            -H "Content-Type: application/json" `
-            $env:LOKI_URL `
-            --data-binary "@loki-payload.json" 2>&1
           
           $lines = $response -split "`n"
           $httpCode = $lines[-1]
