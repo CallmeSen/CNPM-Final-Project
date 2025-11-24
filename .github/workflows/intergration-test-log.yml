@@ -130,60 +130,60 @@ jobs:
           Write-Host "📤 Pushing Auth Service logs to Loki..." -ForegroundColor Cyan
           
           # Generate Loki payload using Python
-          $pythonScript = @'
+          $pythonScript = @"
           import json
           import os
           import time
           import sys
           from pathlib import Path
           
-          log_file = "auth-integration-test.log"
+          log_file = 'auth-integration-test.log'
           if not Path(log_file).exists():
-              print(f"Log file {log_file} not found")
+              print('Log file not found')
               sys.exit(0)
           
-          test_status = "unknown"
-          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+          test_status = 'unknown'
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
               content = f.read()
-              if "PASSED" in content:
-                  test_status = "passed"
-              elif "FAILED" in content:
-                  test_status = "failed"
+              if 'PASSED' in content:
+                  test_status = 'passed'
+              elif 'FAILED' in content:
+                  test_status = 'failed'
           
           labels = {
-              "job": "integration-tests",
-              "service": "auth",
-              "repo": os.environ.get("GITHUB_REPOSITORY", "unknown"),
-              "workflow": os.environ.get("GITHUB_WORKFLOW", "unknown"),
-              "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
-              "run_number": os.environ.get("GITHUB_RUN_NUMBER", "unknown"),
-              "branch": os.environ.get("GITHUB_REF_NAME", "unknown"),
-              "commit": os.environ.get("GITHUB_SHA", "unknown")[:7],
-              "test_status": test_status,
-              "log_type": "integration-test",
-              "environment": "ci"
+              'job': 'integration-tests',
+              'service': 'auth',
+              'repo': os.environ.get('GITHUB_REPOSITORY', 'unknown'),
+              'workflow': os.environ.get('GITHUB_WORKFLOW', 'unknown'),
+              'run_id': os.environ.get('GITHUB_RUN_ID', 'unknown'),
+              'run_number': os.environ.get('GITHUB_RUN_NUMBER', 'unknown'),
+              'branch': os.environ.get('GITHUB_REF_NAME', 'unknown'),
+              'commit': os.environ.get('GITHUB_SHA', 'unknown')[:7],
+              'test_status': test_status,
+              'log_type': 'integration-test',
+              'environment': 'ci'
           }
           
           values = []
           base_ts = int(time.time() * 1e9)
           
-          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
               for idx, line in enumerate(f):
                   ts = str(base_ts + idx * 1000)
                   values.append([ts, line.rstrip()])
           
           payload = {
-              "streams": [{
-                  "stream": labels,
-                  "values": values
+              'streams': [{
+                  'stream': labels,
+                  'values': values
               }]
           }
           
-          with open("loki-payload.json", "w", encoding="utf-8") as f:
+          with open('loki-payload.json', 'w', encoding='utf-8') as f:
               json.dump(payload, f)
           
-          print(f"✓ Prepared {len(values)} log lines for Loki (status: {test_status})")
-          '@
+          print('Prepared ' + str(len(values)) + ' log lines (status: ' + test_status + ')')
+          "@
           
           $pythonScript | python
           
@@ -297,42 +297,42 @@ jobs:
           
           Write-Host "📤 Pushing Restaurant Service logs to Loki..." -ForegroundColor Cyan
           
-          $pythonScript = @'
+          $pythonScript = @"
           import json, os, time, sys
           from pathlib import Path
           
-          log_file = "restaurant-integration-test.log"
+          log_file = 'restaurant-integration-test.log'
           if not Path(log_file).exists():
               sys.exit(0)
           
-          test_status = "unknown"
-          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+          test_status = 'unknown'
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
               content = f.read()
-              if "PASSED" in content: test_status = "passed"
-              elif "FAILED" in content: test_status = "failed"
+              if 'PASSED' in content: test_status = 'passed'
+              elif 'FAILED' in content: test_status = 'failed'
           
           labels = {
-              "job": "integration-tests", "service": "restaurant",
-              "repo": os.environ.get("GITHUB_REPOSITORY", "unknown"),
-              "workflow": os.environ.get("GITHUB_WORKFLOW", "unknown"),
-              "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
-              "run_number": os.environ.get("GITHUB_RUN_NUMBER", "unknown"),
-              "branch": os.environ.get("GITHUB_REF_NAME", "unknown"),
-              "commit": os.environ.get("GITHUB_SHA", "unknown")[:7],
-              "test_status": test_status, "log_type": "integration-test", "environment": "ci"
+              'job': 'integration-tests', 'service': 'restaurant',
+              'repo': os.environ.get('GITHUB_REPOSITORY', 'unknown'),
+              'workflow': os.environ.get('GITHUB_WORKFLOW', 'unknown'),
+              'run_id': os.environ.get('GITHUB_RUN_ID', 'unknown'),
+              'run_number': os.environ.get('GITHUB_RUN_NUMBER', 'unknown'),
+              'branch': os.environ.get('GITHUB_REF_NAME', 'unknown'),
+              'commit': os.environ.get('GITHUB_SHA', 'unknown')[:7],
+              'test_status': test_status, 'log_type': 'integration-test', 'environment': 'ci'
           }
           
           values = []
           base_ts = int(time.time() * 1e9)
-          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
               for idx, line in enumerate(f):
                   values.append([str(base_ts + idx * 1000), line.rstrip()])
           
-          with open("loki-payload.json", "w", encoding="utf-8") as f:
-              json.dump({"streams": [{"stream": labels, "values": values}]}, f)
+          with open('loki-payload.json', 'w', encoding='utf-8') as f:
+              json.dump({'streams': [{'stream': labels, 'values': values}]}, f)
           
-          print(f"✓ Prepared {len(values)} log lines (status: {test_status})")
-          '@
+          print('Prepared ' + str(len(values)) + ' log lines (status: ' + test_status + ')')
+          "@
           
           $pythonScript | python
           
@@ -440,42 +440,42 @@ jobs:
           
           Write-Host "📤 Pushing Order Service logs to Loki..." -ForegroundColor Cyan
           
-          $pythonScript = @'
+          $pythonScript = @"
           import json, os, time, sys
           from pathlib import Path
           
-          log_file = "order-integration-test.log"
+          log_file = 'order-integration-test.log'
           if not Path(log_file).exists():
               sys.exit(0)
           
-          test_status = "unknown"
-          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+          test_status = 'unknown'
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
               content = f.read()
-              if "PASSED" in content: test_status = "passed"
-              elif "FAILED" in content: test_status = "failed"
+              if 'PASSED' in content: test_status = 'passed'
+              elif 'FAILED' in content: test_status = 'failed'
           
           labels = {
-              "job": "integration-tests", "service": "order",
-              "repo": os.environ.get("GITHUB_REPOSITORY", "unknown"),
-              "workflow": os.environ.get("GITHUB_WORKFLOW", "unknown"),
-              "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
-              "run_number": os.environ.get("GITHUB_RUN_NUMBER", "unknown"),
-              "branch": os.environ.get("GITHUB_REF_NAME", "unknown"),
-              "commit": os.environ.get("GITHUB_SHA", "unknown")[:7],
-              "test_status": test_status, "log_type": "integration-test", "environment": "ci"
+              'job': 'integration-tests', 'service': 'order',
+              'repo': os.environ.get('GITHUB_REPOSITORY', 'unknown'),
+              'workflow': os.environ.get('GITHUB_WORKFLOW', 'unknown'),
+              'run_id': os.environ.get('GITHUB_RUN_ID', 'unknown'),
+              'run_number': os.environ.get('GITHUB_RUN_NUMBER', 'unknown'),
+              'branch': os.environ.get('GITHUB_REF_NAME', 'unknown'),
+              'commit': os.environ.get('GITHUB_SHA', 'unknown')[:7],
+              'test_status': test_status, 'log_type': 'integration-test', 'environment': 'ci'
           }
           
           values = []
           base_ts = int(time.time() * 1e9)
-          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
               for idx, line in enumerate(f):
                   values.append([str(base_ts + idx * 1000), line.rstrip()])
           
-          with open("loki-payload.json", "w", encoding="utf-8") as f:
-              json.dump({"streams": [{"stream": labels, "values": values}]}, f)
+          with open('loki-payload.json', 'w', encoding='utf-8') as f:
+              json.dump({'streams': [{'stream': labels, 'values': values}]}, f)
           
-          print(f"✓ Prepared {len(values)} log lines (status: {test_status})")
-          '@
+          print('Prepared ' + str(len(values)) + ' log lines (status: ' + test_status + ')')
+          "@
           
           $pythonScript | python
           
@@ -583,42 +583,42 @@ jobs:
           
           Write-Host "📤 Pushing Payment Service logs to Loki..." -ForegroundColor Cyan
           
-          $pythonScript = @'
+          $pythonScript = @"
           import json, os, time, sys
           from pathlib import Path
           
-          log_file = "payment-integration-test.log"
+          log_file = 'payment-integration-test.log'
           if not Path(log_file).exists():
               sys.exit(0)
           
-          test_status = "unknown"
-          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+          test_status = 'unknown'
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
               content = f.read()
-              if "PASSED" in content: test_status = "passed"
-              elif "FAILED" in content: test_status = "failed"
+              if 'PASSED' in content: test_status = 'passed'
+              elif 'FAILED' in content: test_status = 'failed'
           
           labels = {
-              "job": "integration-tests", "service": "payment",
-              "repo": os.environ.get("GITHUB_REPOSITORY", "unknown"),
-              "workflow": os.environ.get("GITHUB_WORKFLOW", "unknown"),
-              "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
-              "run_number": os.environ.get("GITHUB_RUN_NUMBER", "unknown"),
-              "branch": os.environ.get("GITHUB_REF_NAME", "unknown"),
-              "commit": os.environ.get("GITHUB_SHA", "unknown")[:7],
-              "test_status": test_status, "log_type": "integration-test", "environment": "ci"
+              'job': 'integration-tests', 'service': 'payment',
+              'repo': os.environ.get('GITHUB_REPOSITORY', 'unknown'),
+              'workflow': os.environ.get('GITHUB_WORKFLOW', 'unknown'),
+              'run_id': os.environ.get('GITHUB_RUN_ID', 'unknown'),
+              'run_number': os.environ.get('GITHUB_RUN_NUMBER', 'unknown'),
+              'branch': os.environ.get('GITHUB_REF_NAME', 'unknown'),
+              'commit': os.environ.get('GITHUB_SHA', 'unknown')[:7],
+              'test_status': test_status, 'log_type': 'integration-test', 'environment': 'ci'
           }
           
           values = []
           base_ts = int(time.time() * 1e9)
-          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
               for idx, line in enumerate(f):
                   values.append([str(base_ts + idx * 1000), line.rstrip()])
           
-          with open("loki-payload.json", "w", encoding="utf-8") as f:
-              json.dump({"streams": [{"stream": labels, "values": values}]}, f)
+          with open('loki-payload.json', 'w', encoding='utf-8') as f:
+              json.dump({'streams': [{'stream': labels, 'values': values}]}, f)
           
-          print(f"✓ Prepared {len(values)} log lines (status: {test_status})")
-          '@
+          print('Prepared ' + str(len(values)) + ' log lines (status: ' + test_status + ')')
+          "@
           
           $pythonScript | python
           
