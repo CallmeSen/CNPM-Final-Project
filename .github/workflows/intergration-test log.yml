@@ -14,11 +14,11 @@ on:
       - source
     paths:
       - 'backend/**'
-  workflow_run:
-    workflows:
-      - backend-ci
-    types:
-      - completed
+  # workflow_run:
+  #   workflows:
+  #     - backend-ci
+  #   types:
+  #     - completed
 
 jobs:
   setup-infrastructure:
