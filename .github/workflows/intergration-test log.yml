@@ -1,4 +1,4 @@
-name: Integration Test
+name: Integration Test Log
 
 on:
   push:
