@@ -7,7 +7,7 @@ on:
       - source
     paths:
       - 'backend/**'
-      - '.github/workflows/integration-test copy.yml'
+      - '.github/workflows/integration-test log.yml'
   pull_request:
     branches:
       - main
