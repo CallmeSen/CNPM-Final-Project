@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { PaymentModule } from './payment/payment.module';
 import { join } from 'path';
 
@@ -23,7 +23,10 @@ import { join } from 'path';
       defaultMetrics: {
         enabled: true,
       },
-      path: '/metrics',
+      path: 'metrics',
+      defaultLabels: {
+        app: 'payment-service',
+      },
     }),
     PaymentModule,
   ],

@@ -14,7 +14,8 @@ jest.mock('stripe', () => ({
   __esModule: true,
   default: jest.fn().mockImplementation(() => ({
     paymentIntents: {
-      create: jest.fn()
+      create: jest
+        .fn()
         .mockResolvedValueOnce({
           id: 'pi_test_duplicate_1',
           client_secret: 'pi_test_secret_1',
@@ -41,16 +42,20 @@ describe('RISK-06: Duplicate payment intent creation race condition (Integration
       .overrideProvider(ConfigService)
       .useValue({
         get: jest.fn((key: string) => {
-          if (key === 'MONGO_PAY_URL') return 'mongodb://payment:payment123@localhost:28019/Payment';
-          if (key === 'STRIPE_SECRET_KEY') return process.env.STRIPE_SECRET_KEY || 'sk_test_valid';
+          if (key === 'MONGO_PAY_URL')
+            return 'mongodb://payment:payment123@localhost:28019/Payment';
+          if (key === 'STRIPE_SECRET_KEY')
+            return process.env.STRIPE_SECRET_KEY || 'sk_test_valid';
           return null;
         }),
       })
       .overrideProvider(PaymentService)
       .useValue({
-        findByOrderId: jest.fn()
+        findByOrderId: jest
+          .fn()
           .mockResolvedValueOnce(null) // First request - no existing payment
-          .mockResolvedValueOnce({     // Second request (line 54) - existing payment found
+          .mockResolvedValueOnce({
+            // Second request (line 54) - existing payment found
             orderId: 'duplicate-order-06',
             status: 'pending',
             email: 'test@example.com',
@@ -61,7 +66,8 @@ describe('RISK-06: Duplicate payment intent creation race condition (Integration
             stripePaymentIntentId: 'pi_test_duplicate_1',
             stripeClientSecret: 'pi_test_secret_1',
           })
-          .mockResolvedValueOnce({     // Second request (catch block, line 137) - still existing
+          .mockResolvedValueOnce({
+            // Second request (catch block, line 137) - still existing
             orderId: 'duplicate-order-06',
             status: 'pending',
             email: 'test@example.com',
@@ -72,8 +78,10 @@ describe('RISK-06: Duplicate payment intent creation race condition (Integration
             stripePaymentIntentId: 'pi_test_duplicate_1',
             stripeClientSecret: 'pi_test_secret_1',
           }),
-        createPayment: jest.fn()
-          .mockResolvedValueOnce({     // First call succeeds
+        createPayment: jest
+          .fn()
+          .mockResolvedValueOnce({
+            // First call succeeds
             orderId: 'duplicate-order-06',
             status: 'pending',
             email: 'test@example.com',
@@ -84,7 +92,8 @@ describe('RISK-06: Duplicate payment intent creation race condition (Integration
             _id: 'payment_id_1',
             stripeClientSecret: 'pi_test_secret_1',
           })
-          .mockRejectedValueOnce({     // Second call fails with duplicate key error
+          .mockRejectedValueOnce({
+            // Second call fails with duplicate key error
             code: 11000,
             message: 'Duplicate key error',
           }),

@@ -27,13 +27,19 @@ export class StripeService {
   async handleWebhook(req: Request, res: Response) {
     this.logger.log('Webhook received');
     const sig = req.headers['stripe-signature'];
-    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
-    this.logger.log(`Using webhook secret: ${webhookSecret?.substring(0, 20)}...`);
-    
+    const webhookSecret = this.configService.get<string>(
+      'STRIPE_WEBHOOK_SECRET',
+    );
+    this.logger.log(
+      `Using webhook secret: ${webhookSecret?.substring(0, 20)}...`,
+    );
+
     // Use rawBody if available, otherwise use body
     const rawBody = (req as any).rawBody || req.body;
-    this.logger.log(`Payload type: ${Buffer.isBuffer(rawBody) ? 'Buffer' : typeof rawBody}`);
-    
+    this.logger.log(
+      `Payload type: ${Buffer.isBuffer(rawBody) ? 'Buffer' : typeof rawBody}`,
+    );
+
     let event;
 
     try {

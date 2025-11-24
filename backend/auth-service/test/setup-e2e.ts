@@ -7,5 +7,6 @@ beforeAll(async () => {
   process.env.JWT_SECRET = 'test-jwt-secret-for-e2e';
   process.env.JWT_EXPIRES_IN = '1h';
   process.env.AUTH_PORT = '5001';
-  process.env.ALLOWED_ORIGINS = 'http://localhost:3000,http://localhost:3001,http://localhost:3002';
+  process.env.ALLOWED_ORIGINS =
+    'http://localhost:3000,http://localhost:3001,http://localhost:3002';
 });

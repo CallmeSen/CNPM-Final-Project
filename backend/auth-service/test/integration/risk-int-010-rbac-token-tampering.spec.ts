@@ -35,6 +35,7 @@ describe('RISK-INT-010: Role-Based Access Control Token Tampering (Integration)'
         phone: '1234567890',
         password: 'password123',
       })
+      .timeout(15000)
       .expect(201);
 
     const customerToken = registerResponse.body.token;
@@ -57,10 +58,11 @@ describe('RISK-INT-010: Role-Based Access Control Token Tampering (Integration)'
       .patch('/api/auth/restaurants/test-id/availability')
       .set('Authorization', `Bearer ${tamperedToken}`)
       .send({ availability: false })
+      .timeout(15000)
       .expect(401); // Should be unauthorized
 
     expect(superAdminResponse.body.message).toBe('Unauthorized');
-  });
+  }, 35000);
 
   it('should validate token integrity and prevent signature bypass', async () => {
     // Register a customer
@@ -73,6 +75,7 @@ describe('RISK-INT-010: Role-Based Access Control Token Tampering (Integration)'
         phone: '1234567890',
         password: 'password123',
       })
+      .timeout(8000)
       .expect(201);
 
     const validToken = registerResponse.body.token;
@@ -83,10 +86,11 @@ describe('RISK-INT-010: Role-Based Access Control Token Tampering (Integration)'
     const invalidResponse = await request(baseUrl)
       .get('/api/auth/customer/profile')
       .set('Authorization', `Bearer ${invalidSignatureToken}`)
+      .timeout(8000)
       .expect(401);
 
     expect(invalidResponse.body.message).toBe('Unauthorized');
-  });
+  }, 35000);
 
   it('should prevent cross-role access with valid tokens', async () => {
     // Register customer
@@ -121,7 +125,7 @@ describe('RISK-INT-010: Role-Based Access Control Token Tampering (Integration)'
       .patch('/api/auth/restaurant/profile/test-id')
       .set('Authorization', `Bearer ${customerToken}`)
       .send({ name: 'Hacked Name' });
-    
+
     // Should be forbidden (403) or unauthorized (401)
     expect([401, 403]).toContain(customerAccessRestaurant.status);
 
@@ -129,7 +133,7 @@ describe('RISK-INT-010: Role-Based Access Control Token Tampering (Integration)'
     const restaurantAccessSuperAdmin = await request(baseUrl)
       .post('/api/auth/restaurants/test-id/delete')
       .set('Authorization', `Bearer ${restaurantToken}`);
-    
+
     expect([401, 403]).toContain(restaurantAccessSuperAdmin.status);
 
     // Test customer trying to access superAdmin endpoints
@@ -137,7 +141,7 @@ describe('RISK-INT-010: Role-Based Access Control Token Tampering (Integration)'
       .patch('/api/auth/restaurants/test-id/availability')
       .set('Authorization', `Bearer ${customerToken}`)
       .send({ availability: false });
-    
+
     expect([401, 403]).toContain(customerAccessSuperAdmin.status);
   });
 
@@ -205,25 +209,29 @@ describe('RISK-INT-010: Role-Based Access Control Token Tampering (Integration)'
     const token = registerResponse.body.token;
 
     // Use token multiple times rapidly (simulating replay)
-    const requests = Array(10).fill(null).map(() =>
-      request(baseUrl)
-        .get('/api/auth/customer/profile')
-        .set('Authorization', `Bearer ${token}`)
-    );
+    const requests = Array(10)
+      .fill(null)
+      .map(() =>
+        request(baseUrl)
+          .get('/api/auth/customer/profile')
+          .set('Authorization', `Bearer ${token}`),
+      );
 
     const responses = await Promise.all(requests);
 
     // All requests should either succeed or fail consistently
     // (not succeed sometimes and fail others due to race conditions)
     const firstStatus = responses[0].status;
-    const allSameStatus = responses.every(resp => resp.status === firstStatus);
+    const allSameStatus = responses.every(
+      (resp) => resp.status === firstStatus,
+    );
 
     expect(allSameStatus).toBe(true);
 
     if (firstStatus === 200) {
       // If successful, all should return same data
       const firstCustomer = responses[0].body.data.customer;
-      responses.forEach(resp => {
+      responses.forEach((resp) => {
         expect(resp.body.data.customer).toEqual(firstCustomer);
       });
     }

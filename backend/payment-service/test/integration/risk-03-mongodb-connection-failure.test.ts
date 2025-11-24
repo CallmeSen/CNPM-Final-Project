@@ -14,7 +14,9 @@ jest.mock('stripe', () => ({
   __esModule: true,
   default: jest.fn().mockImplementation(() => ({
     paymentIntents: {
-      create: jest.fn().mockRejectedValue(new Error('MongoDB connection failed')),
+      create: jest
+        .fn()
+        .mockRejectedValue(new Error('MongoDB connection failed')),
     },
   })),
 }));
@@ -30,14 +32,18 @@ describe('RISK-03: MongoDB connection failure during payment creation (Integrati
       .overrideProvider(ConfigService)
       .useValue({
         get: jest.fn((key: string) => {
-          if (key === 'MONGO_PAY_URL') return 'mongodb://payment:payment123@localhost:28019/Payment';
-          if (key === 'STRIPE_SECRET_KEY') return process.env.STRIPE_SECRET_KEY || 'sk_test_valid';
+          if (key === 'MONGO_PAY_URL')
+            return 'mongodb://payment:payment123@localhost:28019/Payment';
+          if (key === 'STRIPE_SECRET_KEY')
+            return process.env.STRIPE_SECRET_KEY || 'sk_test_valid';
           return null;
         }),
       })
       .overrideProvider(PaymentService)
       .useValue({
-        createPayment: jest.fn().mockRejectedValue(new Error('MongoDB connection failed')),
+        createPayment: jest
+          .fn()
+          .mockRejectedValue(new Error('MongoDB connection failed')),
       })
       .overrideProvider(EmailService)
       .useValue({

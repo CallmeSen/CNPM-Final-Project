@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
         - name: restaurant-service
-          image: restaurant-service:latest
-          imagePullPolicy: IfNotPresent
+          image: cnpm-final-project-restaurant-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5002
           env:

@@ -1,11 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ExecutionContext, CanActivate } from '@nestjs/common';
+import {
+  INestApplication,
+  ExecutionContext,
+  CanActivate,
+} from '@nestjs/common';
 import * as request from 'supertest';
 import { MongoClient, ObjectId } from 'mongodb';
 
 jest.setTimeout(30000);
 if (!process.env.JWT_SECRET) process.env.JWT_SECRET = 'test-secret';
-if (!process.env.MONGO_REST_URL) process.env.MONGO_REST_URL = 'mongodb://restaurant:restaurant123@localhost:28017/Restaurant';
+if (!process.env.MONGO_REST_URL)
+  process.env.MONGO_REST_URL =
+    'mongodb://restaurant:restaurant123@localhost:28017/Restaurant';
 
 import { AppModule } from '../../src/app.module';
 import { JwtAuthGuard } from '../../src/common/guards/jwt-auth.guard';
@@ -14,10 +20,10 @@ import { RolesGuard } from '../../src/common/guards/roles.guard';
 class MockJwtGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    request.user = { 
-      id: 'test-user-id', 
+    request.user = {
+      id: 'test-user-id',
       role: 'restaurant',
-      restaurantId: '507f1f77bcf86cd799439011' // Valid ObjectId string
+      restaurantId: '507f1f77bcf86cd799439011', // Valid ObjectId string
     };
     return true;
   }
@@ -123,24 +129,32 @@ describe('Review Duplication Prevention Race Condition (Risk 6)', () => {
       request(app.getHttpServer())
         .post('/api/reports/review')
         .set('Authorization', 'Bearer test-token')
-        .send(reviewDto)
+        .send(reviewDto),
     );
 
     const responses = await Promise.allSettled(promises);
 
     // Only one should succeed, others should fail with duplicate error
-    const fulfilledResponses = responses.filter(r => r.status === 'fulfilled');
-    const successfulCreations = fulfilledResponses.filter(r => r.value.status === 201);
-    const duplicateErrors = fulfilledResponses.filter(r => r.value.status === 400);
+    const fulfilledResponses = responses.filter(
+      (r) => r.status === 'fulfilled',
+    );
+    const successfulCreations = fulfilledResponses.filter(
+      (r) => r.value.status === 201,
+    );
+    const duplicateErrors = fulfilledResponses.filter(
+      (r) => r.value.status === 400,
+    );
 
     // At most one should succeed (but due to timing, might be more if race condition exists)
     expect(successfulCreations.length).toBeGreaterThan(0);
     // At least some should fail with duplicate error (if race condition prevention works)
     if (duplicateErrors.length === 0) {
-      console.warn('No duplicate errors detected - race condition prevention may not be working');
+      console.warn(
+        'No duplicate errors detected - race condition prevention may not be working',
+      );
     }
 
-    duplicateErrors.forEach(error => {
+    duplicateErrors.forEach((error) => {
       expect(error.value.body.message).toContain('Review already submitted');
     });
   });

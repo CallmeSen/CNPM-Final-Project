@@ -1,11 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ExecutionContext, CanActivate } from '@nestjs/common';
+import {
+  INestApplication,
+  ExecutionContext,
+  CanActivate,
+} from '@nestjs/common';
 import * as request from 'supertest';
 import { MongoClient, ObjectId } from 'mongodb';
 
 jest.setTimeout(30000);
 if (!process.env.JWT_SECRET) process.env.JWT_SECRET = 'test-secret';
-if (!process.env.MONGO_REST_URL) process.env.MONGO_REST_URL = 'mongodb://restaurant:restaurant123@localhost:28017/Restaurant';
+if (!process.env.MONGO_REST_URL)
+  process.env.MONGO_REST_URL =
+    'mongodb://restaurant:restaurant123@localhost:28017/Restaurant';
 
 import { AppModule } from '../../src/app.module';
 import { JwtAuthGuard } from '../../src/common/guards/jwt-auth.guard';
@@ -14,10 +20,10 @@ import { RolesGuard } from '../../src/common/guards/roles.guard';
 class MockJwtGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    request.user = { 
-      id: 'test-user-id', 
+    request.user = {
+      id: 'test-user-id',
       role: 'restaurant',
-      restaurantId: '507f1f77bcf86cd799439011' // Valid ObjectId string
+      restaurantId: '507f1f77bcf86cd799439011', // Valid ObjectId string
     };
     return true;
   }
@@ -82,24 +88,32 @@ describe('Food Item Availability Update Without Transaction (Risk 8)', () => {
   it.skip('should handle concurrent availability updates without race conditions', async () => {
     // Note: Skipped - concurrent updates can naturally have race conditions in test environment
     // Simulate concurrent availability toggle requests
-    const promises = Array.from({ length: 10 }, (_, index) =>
-      request(app.getHttpServer())
-        .put(`/api/food-items/${testFoodItemId}/availability`)
-        .set('Authorization', 'Bearer test-token')
-        .send({ availability: index % 2 === 0 }) // Alternate true/false
+    const promises = Array.from(
+      { length: 10 },
+      (_, index) =>
+        request(app.getHttpServer())
+          .put(`/api/food-items/${testFoodItemId}/availability`)
+          .set('Authorization', 'Bearer test-token')
+          .send({ availability: index % 2 === 0 }), // Alternate true/false
     );
 
     const responses = await Promise.allSettled(promises);
 
     // All requests should complete (some may fail due to auth, but none due to DB issues)
-    const fulfilledCount = responses.filter(r => r.status === 'fulfilled').length;
-    const rejectedCount = responses.filter(r => r.status === 'rejected').length;
+    const fulfilledCount = responses.filter(
+      (r) => r.status === 'fulfilled',
+    ).length;
+    const rejectedCount = responses.filter(
+      (r) => r.status === 'rejected',
+    ).length;
 
     expect(fulfilledCount + rejectedCount).toBe(10);
 
     // Check final state in database
     const db = mongoClient.db('Restaurant');
-    const finalItem = await db.collection('fooditems').findOne({ _id: new ObjectId(testFoodItemId) });
+    const finalItem = await db
+      .collection('fooditems')
+      .findOne({ _id: new ObjectId(testFoodItemId) });
 
     // The final availability should be one of the attempted values
     expect(typeof finalItem?.availability).toBe('boolean');
@@ -116,7 +130,9 @@ describe('Food Item Availability Update Without Transaction (Risk 8)', () => {
 
     // Check database state
     const db = mongoClient.db('Restaurant');
-    let item = await db.collection('fooditems').findOne({ _id: new ObjectId(testFoodItemId) });
+    let item = await db
+      .collection('fooditems')
+      .findOne({ _id: new ObjectId(testFoodItemId) });
     expect(item?.availability).toBe(false);
 
     // Then set to true
@@ -127,7 +143,9 @@ describe('Food Item Availability Update Without Transaction (Risk 8)', () => {
       .expect(200);
 
     // Check final state
-    item = await db.collection('fooditems').findOne({ _id: new ObjectId(testFoodItemId) });
+    item = await db
+      .collection('fooditems')
+      .findOne({ _id: new ObjectId(testFoodItemId) });
     expect(item?.availability).toBe(true);
   });
 
@@ -166,7 +184,9 @@ describe('Food Item Availability Update Without Transaction (Risk 8)', () => {
       .expect(200); // Auth is mocked, so it allows access
 
     // With mocked auth, the restaurant check is bypassed
-    expect(response.body.message).toContain('Food item availability updated successfully');
+    expect(response.body.message).toContain(
+      'Food item availability updated successfully',
+    );
   });
 
   it.skip('should handle rapid consecutive availability updates', async () => {
@@ -183,7 +203,9 @@ describe('Food Item Availability Update Without Transaction (Risk 8)', () => {
 
     // Final state should be from last update (true)
     const db = mongoClient.db('Restaurant');
-    const item = await db.collection('fooditems').findOne({ _id: new ObjectId(testFoodItemId) });
+    const item = await db
+      .collection('fooditems')
+      .findOne({ _id: new ObjectId(testFoodItemId) });
     expect(item?.availability).toBe(true);
   });
 });

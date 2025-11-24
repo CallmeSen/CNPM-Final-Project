@@ -148,7 +148,9 @@ describe('DeliveryFeesService', () => {
 
   describe('calculateFee', () => {
     it('computes fee using matching vehicle configuration', async () => {
-      const doc = createFeeDoc({ calculateFee: jest.fn().mockReturnValue(25000) });
+      const doc = createFeeDoc({
+        calculateFee: jest.fn().mockReturnValue(25000),
+      });
       feeModel.findOne.mockResolvedValue(doc);
 
       const result = await service.calculateFee({

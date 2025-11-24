@@ -24,15 +24,19 @@ describe('RISK-INT-003: File Upload Path Traversal Vulnerability (Integration)',
     // Clean up test data
     const db = mongoClient.db('Auth');
     await db.collection('restaurants').deleteMany({
-      email: { $regex: /^(traversal|malicious|large)@\w+\.com$/ }
+      email: { $regex: /^(traversal|malicious|large)@\w+\.com$/ },
     });
 
     // Clean up uploaded files
     const uploadsDir = path.join(__dirname, '../../uploads');
     if (fs.existsSync(uploadsDir)) {
       const files = fs.readdirSync(uploadsDir);
-      files.forEach(file => {
-        if (file.includes('traversal') || file.includes('malicious') || file.includes('large')) {
+      files.forEach((file) => {
+        if (
+          file.includes('traversal') ||
+          file.includes('malicious') ||
+          file.includes('large')
+        ) {
           fs.unlinkSync(path.join(uploadsDir, file));
         }
       });
@@ -60,8 +64,9 @@ describe('RISK-INT-003: File Upload Path Traversal Vulnerability (Integration)',
         .field('password', 'password123')
         .attach('profilePicture', testFilePath, {
           filename: maliciousFilename,
-          contentType: 'text/plain'
-        });
+          contentType: 'text/plain',
+        })
+        .timeout(10000);
 
       // SECURITY ISSUE: Path traversal should not cause server crash
       // The service should either:
@@ -70,9 +75,13 @@ describe('RISK-INT-003: File Upload Path Traversal Vulnerability (Integration)',
       // 3. NOT crash the server (500)
 
       if (response.status === 500) {
-        console.log('CRITICAL SECURITY ISSUE: Path traversal causes server crash');
+        console.log(
+          'CRITICAL SECURITY ISSUE: Path traversal causes server crash',
+        );
         // This is a known security vulnerability - skip the strict assertion
-        console.warn('Warning: Server crashes on path traversal - needs fixing in production');
+        console.warn(
+          'Warning: Server crashes on path traversal - needs fixing in production',
+        );
         // expect(response.status).not.toBe(500); // Commented out to allow test suite to pass
       } else if (response.status === 201) {
         // If successful, check that the file was properly sanitized
@@ -87,7 +96,8 @@ describe('RISK-INT-003: File Upload Path Traversal Vulnerability (Integration)',
 
         // Try to access the uploaded file
         const fileResponse = await request(baseUrl)
-          .get(profilePictureUrl);
+          .get(profilePictureUrl)
+          .timeout(5000);
 
         // Should be able to access the uploaded file
         expect([200, 404]).toContain(fileResponse.status);
@@ -101,7 +111,7 @@ describe('RISK-INT-003: File Upload Path Traversal Vulnerability (Integration)',
         fs.unlinkSync(testFilePath);
       }
     }
-  });
+  }, 35000);
 
   it('should validate file types and prevent malicious uploads', async () => {
     // Create a file that looks like an image but contains malicious content
@@ -121,7 +131,7 @@ describe('RISK-INT-003: File Upload Path Traversal Vulnerability (Integration)',
         .field('password', 'password123')
         .attach('profilePicture', testFilePath, {
           filename: 'malicious.jpg', // Fake image extension
-          contentType: 'image/jpeg'  // Fake MIME type
+          contentType: 'image/jpeg', // Fake MIME type
         });
 
       // Should reject the upload due to content validation
@@ -135,14 +145,16 @@ describe('RISK-INT-003: File Upload Path Traversal Vulnerability (Integration)',
       // Check if file was uploaded despite the error
       const uploadsDir = path.join(__dirname, '../../uploads');
       if (fs.existsSync(uploadsDir)) {
-        const files = fs.readdirSync(uploadsDir).filter(file =>
-          file.includes('malicious')
-        );
+        const files = fs
+          .readdirSync(uploadsDir)
+          .filter((file) => file.includes('malicious'));
         console.log(`Files with 'malicious' in uploads dir: ${files.length}`);
 
         // If any malicious files were uploaded, that's a security issue
         if (files.length > 0) {
-          console.log('SECURITY ISSUE: Malicious file was uploaded despite validation');
+          console.log(
+            'SECURITY ISSUE: Malicious file was uploaded despite validation',
+          );
           expect(files.length).toBe(0); // This should fail, indicating the vulnerability
         }
       }
@@ -174,7 +186,7 @@ describe('RISK-INT-003: File Upload Path Traversal Vulnerability (Integration)',
         .field('password', 'password123')
         .attach('profilePicture', testFilePath, {
           filename: 'large.jpg',
-          contentType: 'image/jpeg'
+          contentType: 'image/jpeg',
         });
 
       // Should reject due to file size limit

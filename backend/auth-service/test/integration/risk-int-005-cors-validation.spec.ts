@@ -31,9 +31,15 @@ describe('RISK-INT-005: CORS Origin Validation Bypass (Integration)', () => {
       .expect(204);
 
     // Check CORS headers
-    expect(allowedOriginResponse.headers['access-control-allow-origin']).toBe('http://localhost:3000');
-    expect(allowedOriginResponse.headers['access-control-allow-methods']).toBeDefined();
-    expect(allowedOriginResponse.headers['access-control-allow-headers']).toBeDefined();
+    expect(allowedOriginResponse.headers['access-control-allow-origin']).toBe(
+      'http://localhost:3000',
+    );
+    expect(
+      allowedOriginResponse.headers['access-control-allow-methods'],
+    ).toBeDefined();
+    expect(
+      allowedOriginResponse.headers['access-control-allow-headers'],
+    ).toBeDefined();
 
     // Test with another allowed origin
     const allowedOrigin2Response = await request(baseUrl)
@@ -42,7 +48,9 @@ describe('RISK-INT-005: CORS Origin Validation Bypass (Integration)', () => {
       .set('Access-Control-Request-Method', 'POST')
       .expect(204);
 
-    expect(allowedOrigin2Response.headers['access-control-allow-origin']).toBe('http://localhost:3001');
+    expect(allowedOrigin2Response.headers['access-control-allow-origin']).toBe(
+      'http://localhost:3001',
+    );
   });
 
   it('should reject requests from unauthorized origins', async () => {
@@ -54,7 +62,9 @@ describe('RISK-INT-005: CORS Origin Validation Bypass (Integration)', () => {
       .expect(204); // OPTIONS should still return 204, but without proper CORS headers
 
     // The origin should not be reflected back
-    expect(maliciousOriginResponse.headers['access-control-allow-origin']).not.toBe('http://malicious-site.com');
+    expect(
+      maliciousOriginResponse.headers['access-control-allow-origin'],
+    ).not.toBe('http://malicious-site.com');
 
     // Test actual POST request with malicious origin
     const postResponse = await request(baseUrl)
@@ -67,7 +77,9 @@ describe('RISK-INT-005: CORS Origin Validation Bypass (Integration)', () => {
 
     // The request should still work (since CORS is handled by browser)
     // But the response should not include CORS headers for malicious origin
-    expect(postResponse.headers['access-control-allow-origin']).not.toBe('http://malicious-site.com');
+    expect(postResponse.headers['access-control-allow-origin']).not.toBe(
+      'http://malicious-site.com',
+    );
   });
 
   it('should handle CORS preflight requests correctly', async () => {
@@ -80,9 +92,15 @@ describe('RISK-INT-005: CORS Origin Validation Bypass (Integration)', () => {
       .expect(204);
 
     // Verify CORS headers are present
-    expect(preflightResponse.headers['access-control-allow-origin']).toBe('http://localhost:3000');
-    expect(preflightResponse.headers['access-control-allow-methods']).toContain('POST');
-    expect(preflightResponse.headers['access-control-allow-headers']).toBeDefined();
+    expect(preflightResponse.headers['access-control-allow-origin']).toBe(
+      'http://localhost:3000',
+    );
+    expect(preflightResponse.headers['access-control-allow-methods']).toContain(
+      'POST',
+    );
+    expect(
+      preflightResponse.headers['access-control-allow-headers'],
+    ).toBeDefined();
 
     // Now test the actual request
     const actualResponse = await request(baseUrl)
@@ -111,7 +129,9 @@ describe('RISK-INT-005: CORS Origin Validation Bypass (Integration)', () => {
       .expect(204);
 
     // Malicious origin should not be allowed
-    expect(injectionResponse.headers['access-control-allow-origin']).not.toBe('http://malicious-site.com');
+    expect(injectionResponse.headers['access-control-allow-origin']).not.toBe(
+      'http://malicious-site.com',
+    );
 
     // Test with allowed origin to ensure normal functionality still works
     const allowedResponse = await request(baseUrl)
@@ -120,6 +140,8 @@ describe('RISK-INT-005: CORS Origin Validation Bypass (Integration)', () => {
       .set('Access-Control-Request-Method', 'POST')
       .expect(204);
 
-    expect(allowedResponse.headers['access-control-allow-origin']).toBe('http://localhost:3000');
+    expect(allowedResponse.headers['access-control-allow-origin']).toBe(
+      'http://localhost:3000',
+    );
   });
 });

@@ -39,11 +39,14 @@ describe('RISK-05: Resend email sending failure (Integration)', () => {
       .overrideProvider(ConfigService)
       .useValue({
         get: jest.fn((key: string) => {
-          if (key === 'MONGO_PAY_URL') return 'mongodb://payment:payment123@localhost:28019/Payment';
+          if (key === 'MONGO_PAY_URL')
+            return 'mongodb://payment:payment123@localhost:28019/Payment';
           if (key === 'ORDER_SERVICE_URL') return 'http://localhost:5005';
           if (key === 'RESEND_API_KEY') return 'invalid_api_key';
-          if (key === 'STRIPE_WEBHOOK_SECRET') return 'whsec_test_webhook_secret_for_testing';
-          if (key === 'STRIPE_SECRET_KEY') return process.env.STRIPE_SECRET_KEY || 'sk_test_valid';
+          if (key === 'STRIPE_WEBHOOK_SECRET')
+            return 'whsec_test_webhook_secret_for_testing';
+          if (key === 'STRIPE_SECRET_KEY')
+            return process.env.STRIPE_SECRET_KEY || 'sk_test_valid';
           return null;
         }),
       })
@@ -68,7 +71,9 @@ describe('RISK-05: Resend email sending failure (Integration)', () => {
       })
       .overrideProvider(EmailService)
       .useValue({
-        sendPaymentReceipt: jest.fn().mockRejectedValue(new Error('Email sending failed')),
+        sendPaymentReceipt: jest
+          .fn()
+          .mockRejectedValue(new Error('Email sending failed')),
       })
       .overrideProvider(TwilioService)
       .useValue({

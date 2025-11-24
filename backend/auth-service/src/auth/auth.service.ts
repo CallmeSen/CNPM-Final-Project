@@ -386,18 +386,20 @@ export class AuthService {
   }
 
   // Get all restaurants (for public listing)
-  async getAllRestaurants(): Promise<{
-    id: string;
-    name: string;
-    ownerName: string;
-    location: string;
-    contactNumber: string;
-    profilePicture: string;
-    availability: boolean;
-  }[]> {
+  async getAllRestaurants(): Promise<
+    {
+      id: string;
+      name: string;
+      ownerName: string;
+      location: string;
+      contactNumber: string;
+      profilePicture: string;
+      availability: boolean;
+    }[]
+  > {
     const restaurants = await this.restaurantModel.find();
-    
-    return restaurants.map(restaurant => ({
+
+    return restaurants.map((restaurant) => ({
       id: restaurant._id.toString(),
       name: restaurant.name,
       ownerName: restaurant.ownerName,
@@ -409,18 +411,20 @@ export class AuthService {
   }
 
   // Get available restaurants only (for customer view)
-  async getAvailableRestaurants(): Promise<{
-    id: string;
-    name: string;
-    ownerName: string;
-    location: string;
-    contactNumber: string;
-    profilePicture: string;
-    availability: boolean;
-  }[]> {
+  async getAvailableRestaurants(): Promise<
+    {
+      id: string;
+      name: string;
+      ownerName: string;
+      location: string;
+      contactNumber: string;
+      profilePicture: string;
+      availability: boolean;
+    }[]
+  > {
     const restaurants = await this.restaurantModel.find({ availability: true });
-    
-    return restaurants.map(restaurant => ({
+
+    return restaurants.map((restaurant) => ({
       id: restaurant._id.toString(),
       name: restaurant.name,
       ownerName: restaurant.ownerName,
@@ -485,7 +489,8 @@ export class AuthService {
     if (updateData.name) restaurant.name = updateData.name;
     if (updateData.ownerName) restaurant.ownerName = updateData.ownerName;
     if (updateData.location) restaurant.location = updateData.location;
-    if (updateData.contactNumber) restaurant.contactNumber = updateData.contactNumber;
+    if (updateData.contactNumber)
+      restaurant.contactNumber = updateData.contactNumber;
     if (profilePicture) restaurant.profilePicture = profilePicture;
 
     await restaurant.save();

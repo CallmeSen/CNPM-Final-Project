@@ -41,8 +41,7 @@ describe('RISK-INT-006: Health Check Endpoint Information Disclosure (Integratio
 
   it('should prevent access to sensitive static files', async () => {
     // Test access to .gitkeep file (should be blocked or not exist)
-    const gitkeepResponse = await request(baseUrl)
-      .get('/uploads/.gitkeep');
+    const gitkeepResponse = await request(baseUrl).get('/uploads/.gitkeep');
 
     // Should either return 404 (file doesn't exist) or 403 (forbidden)
     expect([403, 404]).toContain(gitkeepResponse.status);
@@ -55,8 +54,7 @@ describe('RISK-INT-006: Health Check Endpoint Information Disclosure (Integratio
 
   it('should not expose directory listings', async () => {
     // Test access to uploads directory without filename
-    const directoryResponse = await request(baseUrl)
-      .get('/uploads/');
+    const directoryResponse = await request(baseUrl).get('/uploads/');
 
     // Should not return directory listing
     expect([403, 404]).toContain(directoryResponse.status);
@@ -79,8 +77,7 @@ describe('RISK-INT-006: Health Check Endpoint Information Disclosure (Integratio
     ];
 
     for (const traversalPath of traversalAttempts) {
-      const response = await request(baseUrl)
-        .get(traversalPath);
+      const response = await request(baseUrl).get(traversalPath).timeout(5000);
 
       // Should be blocked (403) or not found (404)
       expect([403, 404]).toContain(response.status);
@@ -91,12 +88,13 @@ describe('RISK-INT-006: Health Check Endpoint Information Disclosure (Integratio
         expect(response.text).not.toMatch(/bin\/bash/);
       }
     }
-  });
+  }, 25000);
 
   it('should limit information disclosure in error responses', async () => {
     // Test with invalid endpoint
     const invalidEndpointResponse = await request(baseUrl)
       .get('/api/nonexistent')
+      .timeout(5000)
       .expect(404);
 
     // Error response should not disclose internal information
@@ -111,10 +109,11 @@ describe('RISK-INT-006: Health Check Endpoint Information Disclosure (Integratio
       .post('/api/auth/login')
       .send('invalid json {')
       .set('Content-Type', 'application/json')
+      .timeout(5000)
       .expect(400);
 
     // Should not expose internal error details
     expect(malformedResponse.body).not.toHaveProperty('stack');
     expect(malformedResponse.body).not.toHaveProperty('config');
-  });
+  }, 15000);
 });

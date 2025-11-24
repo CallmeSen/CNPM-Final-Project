@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
         - name: payment-service
-          image: payment-service:latest
-          imagePullPolicy: IfNotPresent
+          image: cnpm-final-project-payment-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5004
           env:

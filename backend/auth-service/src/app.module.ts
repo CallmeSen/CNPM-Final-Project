@@ -20,8 +20,7 @@ import { join } from 'path';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => ({
-        uri:
-          config.get<string>('MONGO_AUTH_URL'),
+        uri: config.get<string>('MONGO_AUTH_URL'),
       }),
     }),
     PrometheusModule.register({
@@ -29,6 +28,9 @@ import { join } from 'path';
         enabled: true,
       },
       path: 'metrics',
+      defaultLabels: {
+        app: 'auth-service',
+      },
     }),
     AuthModule,
     UserManagementModule,

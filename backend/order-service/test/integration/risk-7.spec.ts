@@ -33,8 +33,10 @@ describe('Risk 7: DTO Validation Bypass Allowing Malformed Orders (Integration)'
 
   it('should reject order with empty customerId', async () => {
     // Add delay to avoid orderId collision with parallel tests
-    await new Promise(resolve => setTimeout(resolve, 250 + Math.random() * 100));
-    
+    await new Promise((resolve) =>
+      setTimeout(resolve, 250 + Math.random() * 100),
+    );
+
     const customerToken = jwt.sign(
       { id: 'test-customer', role: 'customer' },
       'test-secret',
@@ -61,8 +63,10 @@ describe('Risk 7: DTO Validation Bypass Allowing Malformed Orders (Integration)'
 
   it('should reject order with empty items array', async () => {
     // Add delay to avoid orderId collision with parallel tests
-    await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 100));
-    
+    await new Promise((resolve) =>
+      setTimeout(resolve, 300 + Math.random() * 100),
+    );
+
     const customerToken = jwt.sign(
       { id: 'test-customer', role: 'customer' },
       'test-secret',

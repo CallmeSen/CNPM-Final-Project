@@ -6,7 +6,11 @@ import { CustomerRegisterDto } from './dto/customer-register.dto';
 import { CustomerLoginDto } from './dto/customer-login.dto';
 import { RegisterRestaurantDto } from './dto/register-restaurant.dto';
 import { LoginRestaurantDto } from './dto/login-restaurant.dto';
-import { ConflictException, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Role } from '../common/decorators/roles.decorator';
 
 describe('AuthController', () => {
@@ -94,11 +98,15 @@ describe('AuthController', () => {
         password: 'password123',
       };
 
-      authService.registerCustomer.mockRejectedValue(new ConflictException('Email already exists'));
+      authService.registerCustomer.mockRejectedValue(
+        new ConflictException('Email already exists'),
+      );
 
       // WHEN: Calling registerCustomer endpoint
       // THEN: Should throw ConflictException (HTTP 409)
-      await expect(controller.registerCustomer(dto)).rejects.toThrow(ConflictException);
+      await expect(controller.registerCustomer(dto)).rejects.toThrow(
+        ConflictException,
+      );
       expect(authService.registerCustomer).toHaveBeenCalledWith(dto);
     });
   });
@@ -145,11 +153,15 @@ describe('AuthController', () => {
         password: 'wrongpassword',
       };
 
-      authService.loginCustomer.mockRejectedValue(new UnauthorizedException('Invalid credentials'));
+      authService.loginCustomer.mockRejectedValue(
+        new UnauthorizedException('Invalid credentials'),
+      );
 
       // WHEN: Calling loginCustomer endpoint
       // THEN: Should throw UnauthorizedException (HTTP 401)
-      await expect(controller.loginCustomer(dto)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.loginCustomer(dto)).rejects.toThrow(
+        UnauthorizedException,
+      );
       expect(authService.loginCustomer).toHaveBeenCalledWith(dto);
     });
   });
@@ -158,13 +170,19 @@ describe('AuthController', () => {
   describe('getProfile', () => {
     it('should throw NotFoundException when customer does not exist', async () => {
       // GIVEN: Request with non-existent customer ID
-      const req = { user: { userId: 'non-existent-id', role: 'customer' as Role } };
+      const req = {
+        user: { userId: 'non-existent-id', role: 'customer' as Role },
+      };
 
-      authService.getProfile.mockRejectedValue(new NotFoundException('Customer not found'));
+      authService.getProfile.mockRejectedValue(
+        new NotFoundException('Customer not found'),
+      );
 
       // WHEN: Calling getProfile endpoint
       // THEN: Should throw NotFoundException (HTTP 404)
-      await expect(controller.getProfile(req)).rejects.toThrow(NotFoundException);
+      await expect(controller.getProfile(req)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(authService.getProfile).toHaveBeenCalledWith('non-existent-id');
     });
   });
@@ -209,7 +227,10 @@ describe('AuthController', () => {
         token: 'mock-jwt-token',
         data: { restaurant: serviceResult.restaurant },
       });
-      expect(authService.registerRestaurant).toHaveBeenCalledWith(dto, '/uploads/test.jpg');
+      expect(authService.registerRestaurant).toHaveBeenCalledWith(
+        dto,
+        '/uploads/test.jpg',
+      );
     });
 
     // 7. registerRestaurant - error path (HTTP 409)
@@ -225,12 +246,19 @@ describe('AuthController', () => {
       };
       const file = { filename: 'test.jpg' } as Express.Multer.File;
 
-      authService.registerRestaurant.mockRejectedValue(new ConflictException('Restaurant name or email already exists'));
+      authService.registerRestaurant.mockRejectedValue(
+        new ConflictException('Restaurant name or email already exists'),
+      );
 
       // WHEN: Calling registerRestaurant endpoint
       // THEN: Should throw ConflictException (HTTP 409)
-      await expect(controller.registerRestaurant(dto, file)).rejects.toThrow(ConflictException);
-      expect(authService.registerRestaurant).toHaveBeenCalledWith(dto, '/uploads/test.jpg');
+      await expect(controller.registerRestaurant(dto, file)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(authService.registerRestaurant).toHaveBeenCalledWith(
+        dto,
+        '/uploads/test.jpg',
+      );
     });
   });
 
@@ -243,11 +271,15 @@ describe('AuthController', () => {
         password: 'wrongpassword',
       };
 
-      authService.loginRestaurant.mockRejectedValue(new UnauthorizedException('Invalid restaurant credentials'));
+      authService.loginRestaurant.mockRejectedValue(
+        new UnauthorizedException('Invalid restaurant credentials'),
+      );
 
       // WHEN: Calling loginRestaurant endpoint
       // THEN: Should throw UnauthorizedException (HTTP 401)
-      await expect(controller.loginRestaurant(dto)).rejects.toThrow(UnauthorizedException);
+      await expect(controller.loginRestaurant(dto)).rejects.toThrow(
+        UnauthorizedException,
+      );
       expect(authService.loginRestaurant).toHaveBeenCalledWith(dto);
     });
   });

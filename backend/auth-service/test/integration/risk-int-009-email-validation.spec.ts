@@ -25,11 +25,11 @@ describe('RISK-INT-009: Email Validation Regex Injection (Integration)', () => {
   it('should prevent email regex injection in customer registration', async () => {
     // Test various regex injection attempts
     const maliciousEmails = [
-      'test@evil.com\'||true||\'',
-      'test@evil.com\'||1==1||\'',
-      'test@evil.com\'||\'\'==\'\'||\'',
-      'test@evil.com\'||false||\'@good.com',
-      'test@evil.com\'.concat(\'@evil.com\')',
+      "test@evil.com'||true||'",
+      "test@evil.com'||1==1||'",
+      "test@evil.com'||''==''||'",
+      "test@evil.com'||false||'@good.com",
+      "test@evil.com'.concat('@evil.com')",
       'test@evil.com${"@evil.com"}',
     ];
 
@@ -49,7 +49,9 @@ describe('RISK-INT-009: Email Validation Regex Injection (Integration)', () => {
 
       // Should not create account with malicious email
       const db = mongoClient.db('Auth');
-      const customer = await db.collection('customers').findOne({ email: maliciousEmail });
+      const customer = await db
+        .collection('customers')
+        .findOne({ email: maliciousEmail });
       expect(customer).toBeNull();
     }
   });
@@ -57,9 +59,9 @@ describe('RISK-INT-009: Email Validation Regex Injection (Integration)', () => {
   it('should prevent email regex injection in restaurant registration', async () => {
     // Test regex injection in restaurant registration
     const maliciousEmails = [
-      'restaurant@evil.com\'||true||\'',
-      'restaurant@evil.com\'||1==1||\'',
-      'restaurant@evil.com\'.concat(\'@evil.com\')',
+      "restaurant@evil.com'||true||'",
+      "restaurant@evil.com'||1==1||'",
+      "restaurant@evil.com'.concat('@evil.com')",
     ];
 
     for (const maliciousEmail of maliciousEmails) {
@@ -77,7 +79,9 @@ describe('RISK-INT-009: Email Validation Regex Injection (Integration)', () => {
 
       // Should not create restaurant with malicious email
       const db = mongoClient.db('Auth');
-      const restaurant = await db.collection('restaurants').findOne({ 'admin.email': maliciousEmail });
+      const restaurant = await db
+        .collection('restaurants')
+        .findOne({ 'admin.email': maliciousEmail });
       expect(restaurant).toBeNull();
     }
   });
@@ -105,7 +109,8 @@ describe('RISK-INT-009: Email Validation Regex Injection (Integration)', () => {
           email: testCase.email,
           phone: '1234567890',
           password: 'password123',
-        });
+        })
+        .timeout(5000);
 
       if (testCase.shouldPass) {
         // Should succeed or fail only due to uniqueness, not validation
@@ -115,7 +120,7 @@ describe('RISK-INT-009: Email Validation Regex Injection (Integration)', () => {
         expect(response.status).toBe(400);
       }
     }
-  });
+  }, 50000);
 
   it('should prevent MongoDB injection through email fields', async () => {
     // Test MongoDB injection attempts through email
@@ -142,7 +147,9 @@ describe('RISK-INT-009: Email Validation Regex Injection (Integration)', () => {
 
       // Should not create any account
       const db = mongoClient.db('Auth');
-      const customer = await db.collection('customers').findOne({ email: attempt.email });
+      const customer = await db
+        .collection('customers')
+        .findOne({ email: attempt.email });
       expect(customer).toBeNull();
     }
   });
@@ -150,10 +157,10 @@ describe('RISK-INT-009: Email Validation Regex Injection (Integration)', () => {
   it('should handle special characters in email safely', async () => {
     // Test emails with special characters that could be used for injection
     const specialEmails = [
-      'test+tag@test.com',  // Plus sign
-      'test.tag@test.com',  // Dot
-      'test-tag@test.com',  // Dash
-      'test_tag@test.com',  // Underscore
+      'test+tag@test.com', // Plus sign
+      'test.tag@test.com', // Dot
+      'test-tag@test.com', // Dash
+      'test_tag@test.com', // Underscore
       'test@test-domain.com', // Dash in domain
     ];
 

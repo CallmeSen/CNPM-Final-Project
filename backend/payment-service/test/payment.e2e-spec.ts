@@ -254,12 +254,9 @@ describe('Payment Service E2E Tests', () => {
 
   describe('GET /', () => {
     it('should return Hello World', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/')
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/').expect(200);
 
       expect(response.text).toBe('Hello World!');
     });
   });
 });
-

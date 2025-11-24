@@ -19,9 +19,11 @@ describe('RISK-01: Stripe webhook signature verification failure (Integration)',
       .overrideProvider(ConfigService)
       .useValue({
         get: jest.fn((key: string) => {
-          if (key === 'MONGO_PAY_URL') return 'mongodb://payment:payment123@localhost:28019/Payment';
+          if (key === 'MONGO_PAY_URL')
+            return 'mongodb://payment:payment123@localhost:28019/Payment';
           if (key === 'STRIPE_WEBHOOK_SECRET') return 'invalid_webhook_secret';
-          if (key === 'STRIPE_SECRET_KEY') return process.env.STRIPE_SECRET_KEY || 'sk_test_invalid';
+          if (key === 'STRIPE_SECRET_KEY')
+            return process.env.STRIPE_SECRET_KEY || 'sk_test_invalid';
           if (key === 'RESEND_API_KEY') return 're_test_key_for_testing';
           if (key === 'TWILIO_ACCOUNT_SID') return 'AC_test_account_sid';
           if (key === 'TWILIO_AUTH_TOKEN') return 'test_auth_token';
@@ -34,7 +36,9 @@ describe('RISK-01: Stripe webhook signature verification failure (Integration)',
 
     app = moduleFixture.createNestApplication();
     configService = moduleFixture.get<ConfigService>(ConfigService);
-    stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY')!, { apiVersion: '2023-10-16' });
+    stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY')!, {
+      apiVersion: '2023-10-16',
+    });
 
     await app.init();
   });

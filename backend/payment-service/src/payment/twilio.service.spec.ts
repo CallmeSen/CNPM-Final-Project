@@ -118,7 +118,8 @@ describe('TwilioService', () => {
       const mockResponse = { sid: 'SM123' };
       (service as any).client.messages.create.mockResolvedValue(mockResponse);
 
-      const message = 'Your payment for Order ORDER123 failed. Please try again.';
+      const message =
+        'Your payment for Order ORDER123 failed. Please try again.';
       await service.sendPaymentSMS('+1234567890', message);
 
       expect((service as any).client.messages.create).toHaveBeenCalledWith(
@@ -129,4 +130,3 @@ describe('TwilioService', () => {
     });
   });
 });
-

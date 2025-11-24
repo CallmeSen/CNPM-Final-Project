@@ -39,10 +39,14 @@ describe('RISK-08: Network timeout to order-service during status update (Integr
       .overrideProvider(ConfigService)
       .useValue({
         get: jest.fn((key: string) => {
-          if (key === 'MONGO_PAY_URL') return 'mongodb://payment:payment123@localhost:28019/Payment';
-          if (key === 'ORDER_SERVICE_URL') return 'http://unreachable-order-service:5005';
-          if (key === 'STRIPE_WEBHOOK_SECRET') return 'whsec_test_webhook_secret_for_testing';
-          if (key === 'STRIPE_SECRET_KEY') return process.env.STRIPE_SECRET_KEY || 'sk_test_valid';
+          if (key === 'MONGO_PAY_URL')
+            return 'mongodb://payment:payment123@localhost:28019/Payment';
+          if (key === 'ORDER_SERVICE_URL')
+            return 'http://unreachable-order-service:5005';
+          if (key === 'STRIPE_WEBHOOK_SECRET')
+            return 'whsec_test_webhook_secret_for_testing';
+          if (key === 'STRIPE_SECRET_KEY')
+            return process.env.STRIPE_SECRET_KEY || 'sk_test_valid';
           return null;
         }),
       })

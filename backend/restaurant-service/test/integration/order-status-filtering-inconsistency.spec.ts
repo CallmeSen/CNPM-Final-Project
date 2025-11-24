@@ -1,11 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ExecutionContext, CanActivate } from '@nestjs/common';
+import {
+  INestApplication,
+  ExecutionContext,
+  CanActivate,
+} from '@nestjs/common';
 import * as request from 'supertest';
 import { MongoClient } from 'mongodb';
 
 jest.setTimeout(30000);
 if (!process.env.JWT_SECRET) process.env.JWT_SECRET = 'test-secret';
-if (!process.env.MONGO_REST_URL) process.env.MONGO_REST_URL = 'mongodb://restaurant:restaurant123@localhost:28017/Restaurant';
+if (!process.env.MONGO_REST_URL)
+  process.env.MONGO_REST_URL =
+    'mongodb://restaurant:restaurant123@localhost:28017/Restaurant';
 
 import { AppModule } from '../../src/app.module';
 import { JwtAuthGuard } from '../../src/common/guards/jwt-auth.guard';
@@ -14,10 +20,10 @@ import { RolesGuard } from '../../src/common/guards/roles.guard';
 class MockJwtGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    request.user = { 
-      id: 'test-user-id', 
+    request.user = {
+      id: 'test-user-id',
       role: 'restaurant',
-      restaurantId: 'test-restaurant-id'
+      restaurantId: 'test-restaurant-id',
     };
     return true;
   }

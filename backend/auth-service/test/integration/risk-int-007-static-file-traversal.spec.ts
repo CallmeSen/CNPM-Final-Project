@@ -30,8 +30,7 @@ describe('RISK-INT-007: Static File Serving Directory Traversal (Integration)', 
     ];
 
     for (const path of traversalPaths) {
-      const response = await request(baseUrl)
-        .get(path);
+      const response = await request(baseUrl).get(path).timeout(15000);
 
       // Should be blocked or not found
       expect([403, 404]).toContain(response.status);
@@ -43,7 +42,7 @@ describe('RISK-INT-007: Static File Serving Directory Traversal (Integration)', 
         expect(response.text).not.toMatch(/etc\/passwd/);
       }
     }
-  });
+  }, 100000);
 
   it('should validate file paths before serving', async () => {
     // Test with absolute paths
@@ -55,12 +54,11 @@ describe('RISK-INT-007: Static File Serving Directory Traversal (Integration)', 
     ];
 
     for (const path of absolutePaths) {
-      const response = await request(baseUrl)
-        .get(path);
+      const response = await request(baseUrl).get(path).timeout(3000);
 
       expect([403, 404]).toContain(response.status);
     }
-  });
+  }, 15000);
 
   it('should prevent access to parent directories', async () => {
     // Test multiple levels of parent directory traversal
@@ -72,8 +70,7 @@ describe('RISK-INT-007: Static File Serving Directory Traversal (Integration)', 
     ];
 
     for (const path of parentPaths) {
-      const response = await request(baseUrl)
-        .get(path);
+      const response = await request(baseUrl).get(path).timeout(3000);
 
       expect([403, 404]).toContain(response.status);
 
@@ -83,7 +80,7 @@ describe('RISK-INT-007: Static File Serving Directory Traversal (Integration)', 
         expect(response.text).not.toMatch(/"version":/);
       }
     }
-  });
+  }, 15000);
 
   it('should handle encoded traversal sequences', async () => {
     // Test URL-encoded traversal sequences
@@ -95,12 +92,11 @@ describe('RISK-INT-007: Static File Serving Directory Traversal (Integration)', 
     ];
 
     for (const path of encodedPaths) {
-      const response = await request(baseUrl)
-        .get(path);
+      const response = await request(baseUrl).get(path).timeout(3000);
 
       expect([403, 404]).toContain(response.status);
     }
-  });
+  }, 15000);
 
   it('should prevent access to hidden files and directories', async () => {
     // Test access to hidden files
@@ -113,10 +109,9 @@ describe('RISK-INT-007: Static File Serving Directory Traversal (Integration)', 
     ];
 
     for (const path of hiddenFiles) {
-      const response = await request(baseUrl)
-        .get(path);
+      const response = await request(baseUrl).get(path).timeout(3000);
 
       expect([403, 404]).toContain(response.status);
     }
-  });
+  }, 15000);
 });

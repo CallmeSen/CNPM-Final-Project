@@ -4,10 +4,14 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { join } from 'path';
+import { MetricsMiddleware } from './common/metrics.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
+
+  // Apply metrics middleware globally
+  app.use(new MetricsMiddleware().use.bind(new MetricsMiddleware()));
 
   app.setGlobalPrefix('api');
 

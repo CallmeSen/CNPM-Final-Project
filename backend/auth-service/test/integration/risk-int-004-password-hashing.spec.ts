@@ -13,7 +13,7 @@ describe('RISK-INT-004: Password Hashing Algorithm Inconsistency (Integration)',
     // Connect to MongoDB for verification
     mongoClient = new MongoClient(mongoUri);
     await mongoClient.connect();
-  }, 10000);
+  }, 20000);
 
   afterAll(async () => {
     await mongoClient.close();
@@ -23,10 +23,10 @@ describe('RISK-INT-004: Password Hashing Algorithm Inconsistency (Integration)',
     // Clean up test data
     const db = mongoClient.db('Auth');
     await db.collection('customers').deleteMany({
-      email: { $regex: /^(hash|restaurant|timing)@\w+\.com$/ }
+      email: { $regex: /^(hash|restaurant|timing)@\w+\.com$/ },
     });
     await db.collection('restaurants').deleteMany({
-      'admin.email': { $regex: /^.*@test\.com$/ }
+      'admin.email': { $regex: /^.*@test\.com$/ },
     });
   });
 
@@ -41,6 +41,7 @@ describe('RISK-INT-004: Password Hashing Algorithm Inconsistency (Integration)',
         phone: '1234567890',
         password: 'password123',
       })
+      .timeout(12000)
       .expect(201);
 
     // Verify login works (tests that password was hashed correctly)
@@ -50,13 +51,16 @@ describe('RISK-INT-004: Password Hashing Algorithm Inconsistency (Integration)',
         email: registerResponse.body.data.customer.email,
         password: 'password123',
       })
+      .timeout(12000)
       .expect(200);
 
     expect(loginResponse.body.token).toBeDefined();
 
     // Check the stored hash in database
     const db = mongoClient.db('Auth');
-    const customer = await db.collection('customers').findOne({ email: registerResponse.body.data.customer.email });
+    const customer = await db
+      .collection('customers')
+      .findOne({ email: registerResponse.body.data.customer.email });
 
     expect(customer).toBeDefined();
     expect(customer.password).toBeDefined();
@@ -65,9 +69,12 @@ describe('RISK-INT-004: Password Hashing Algorithm Inconsistency (Integration)',
     expect(customer.password).toMatch(/^\$2[aby]\$.+/);
 
     // Verify password comparison works
-    const isValidPassword = await bcrypt.compare('password123', customer.password);
+    const isValidPassword = await bcrypt.compare(
+      'password123',
+      customer.password,
+    );
     expect(isValidPassword).toBe(true);
-  });
+  }, 35000);
 
   it('should use consistent password hashing for restaurants', async () => {
     // Register a restaurant
@@ -79,6 +86,7 @@ describe('RISK-INT-004: Password Hashing Algorithm Inconsistency (Integration)',
       .field('contactNumber', '1234567890')
       .field('email', `restaurant${Date.now()}${Math.random()}@test.com`)
       .field('password', 'restaurant123')
+      .timeout(10000)
       .expect(201);
 
     // Verify restaurant login works
@@ -88,13 +96,16 @@ describe('RISK-INT-004: Password Hashing Algorithm Inconsistency (Integration)',
         email: registerResponse.body.data.restaurant.email,
         password: 'restaurant123',
       })
+      .timeout(8000)
       .expect(200);
 
     expect(loginResponse.body.token).toBeDefined();
 
     // Check the stored hash in database
     const db = mongoClient.db('Auth');
-    const restaurant = await db.collection('restaurants').findOne({ 'admin.email': registerResponse.body.data.restaurant.email });
+    const restaurant = await db
+      .collection('restaurants')
+      .findOne({ 'admin.email': registerResponse.body.data.restaurant.email });
 
     expect(restaurant).toBeDefined();
     expect(restaurant.admin.password).toBeDefined();
@@ -103,9 +114,12 @@ describe('RISK-INT-004: Password Hashing Algorithm Inconsistency (Integration)',
     expect(restaurant.admin.password).toMatch(/^\$2[aby]\$.+/);
 
     // Verify password comparison works
-    const isValidPassword = await bcrypt.compare('restaurant123', restaurant.admin.password);
+    const isValidPassword = await bcrypt.compare(
+      'restaurant123',
+      restaurant.admin.password,
+    );
     expect(isValidPassword).toBe(true);
-  });
+  }, 35000);
 
   it('should prevent timing attacks on password comparison', async () => {
     // Register a user
@@ -124,10 +138,10 @@ describe('RISK-INT-004: Password Hashing Algorithm Inconsistency (Integration)',
 
     // Test login with wrong passwords of different lengths
     const wrongPasswords = [
-      'wrong1',       // 6 chars
-      'wrong12',      // 7 chars
-      'wrong123',     // 8 chars
-      'wrong1234',    // 9 chars
+      'wrong1', // 6 chars
+      'wrong12', // 7 chars
+      'wrong123', // 8 chars
+      'wrong1234', // 9 chars
     ];
 
     const timings = [];

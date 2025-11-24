@@ -3,9 +3,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { ReportsModule } from './reports/reports.module';
 import { RestaurantsModule } from './restaurants/restaurants.module';
 import { FoodItemsModule } from './food-items/food-items.module';
@@ -45,6 +45,9 @@ const envFilePaths = [
         enabled: true,
       },
       path: 'metrics',
+      defaultLabels: {
+        app: 'restaurant-service',
+      },
     }),
     RestaurantsModule,
     FoodItemsModule,

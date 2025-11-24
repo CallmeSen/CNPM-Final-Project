@@ -48,7 +48,9 @@ describe('DeliveryManagementController', () => {
       .compile();
 
     controller = module.get(DeliveryManagementController);
-    service = module.get(DeliveryManagementService) as DeliveryManagementServiceMock;
+    service = module.get(
+      DeliveryManagementService,
+    ) as DeliveryManagementServiceMock;
   });
 
   afterEach(() => {
@@ -155,4 +157,3 @@ describe('DeliveryManagementController', () => {
     expect(result).toEqual(payload);
   });
 });
-

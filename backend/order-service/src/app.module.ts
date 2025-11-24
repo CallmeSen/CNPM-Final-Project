@@ -32,9 +32,13 @@ import { join } from 'path';
         enabled: true,
       },
       path: 'metrics',
+      defaultLabels: {
+        app: 'order-service',
+      },
     }),
     OrdersModule,
     UsersModule,
   ],
+  controllers: [],
 })
 export class AppModule {}

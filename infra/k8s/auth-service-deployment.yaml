@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: auth-service:latest
-          imagePullPolicy: IfNotPresent
+          image: cnpm-final-project-auth-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5001
           env:

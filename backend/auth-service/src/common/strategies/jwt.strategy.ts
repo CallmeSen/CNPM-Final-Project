@@ -6,8 +6,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Customer, CustomerDocument } from '../../schemas/customer.schema';
 import { Admin, AdminDocument } from '../../schemas/admin.schema';
-import { Restaurant, RestaurantDocument } from '../../schemas/restaurant.schema';
-import { SuperAdmin, SuperAdminDocument } from '../../schemas/super-admin.schema';
+import {
+  Restaurant,
+  RestaurantDocument,
+} from '../../schemas/restaurant.schema';
+import {
+  SuperAdmin,
+  SuperAdminDocument,
+} from '../../schemas/super-admin.schema';
 import {
   DeliveryPersonnel,
   DeliveryPersonnelDocument,

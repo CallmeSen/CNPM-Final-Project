@@ -39,10 +39,13 @@ describe('RISK-02: Order-service update failure after payment success (Integrati
       .overrideProvider(ConfigService)
       .useValue({
         get: jest.fn((key: string) => {
-          if (key === 'MONGO_PAY_URL') return 'mongodb://payment:payment123@localhost:28019/Payment';
+          if (key === 'MONGO_PAY_URL')
+            return 'mongodb://payment:payment123@localhost:28019/Payment';
           if (key === 'ORDER_SERVICE_URL') return 'http://localhost:5005'; // Simulate order-service down
-          if (key === 'STRIPE_WEBHOOK_SECRET') return 'whsec_test_webhook_secret_for_testing';
-          if (key === 'STRIPE_SECRET_KEY') return process.env.STRIPE_SECRET_KEY || 'sk_test_valid';
+          if (key === 'STRIPE_WEBHOOK_SECRET')
+            return 'whsec_test_webhook_secret_for_testing';
+          if (key === 'STRIPE_SECRET_KEY')
+            return process.env.STRIPE_SECRET_KEY || 'sk_test_valid';
           if (key === 'RESEND_API_KEY') return 're_test_key_for_testing';
           if (key === 'TWILIO_ACCOUNT_SID') return 'AC_test_account_sid';
           if (key === 'TWILIO_AUTH_TOKEN') return 'test_auth_token';
@@ -75,7 +78,9 @@ describe('RISK-02: Order-service update failure after payment success (Integrati
     configService = moduleFixture.get<ConfigService>(ConfigService);
 
     // Mock axios to simulate failure
-    jest.spyOn(axios, 'patch').mockRejectedValue(new Error('Connection refused'));
+    jest
+      .spyOn(axios, 'patch')
+      .mockRejectedValue(new Error('Connection refused'));
 
     // Mock email and SMS services to avoid delays
     const emailService = app.get(EmailService);

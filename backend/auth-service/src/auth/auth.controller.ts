@@ -115,9 +115,7 @@ export class AuthController {
     @Body() dto: RegisterRestaurantDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    const profilePicture = file
-      ? `/uploads/${file.filename}`
-      : '';
+    const profilePicture = file ? `/uploads/${file.filename}` : '';
     const result = await this.authService.registerRestaurant(
       dto,
       profilePicture,
@@ -217,7 +215,8 @@ export class AuthController {
   @UseInterceptors(FileInterceptor('profilePicture', multerConfig))
   async updateRestaurantProfile(
     @Param('id') restaurantId: string,
-    @Body() updateData: {
+    @Body()
+    updateData: {
       name?: string;
       ownerName?: string;
       location?: string;
@@ -225,9 +224,7 @@ export class AuthController {
     },
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    const profilePictureUrl = file
-      ? `/uploads/${file.filename}`
-      : undefined;
+    const profilePictureUrl = file ? `/uploads/${file.filename}` : undefined;
 
     const result = await this.authService.updateRestaurantProfile(
       restaurantId,

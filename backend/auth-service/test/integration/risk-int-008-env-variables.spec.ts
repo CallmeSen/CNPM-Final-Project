@@ -32,7 +32,7 @@ describe('RISK-INT-008: Environment Variable Secret Exposure (Integration)', () 
     for (const endpoint of endpoints) {
       const response = await request(baseUrl)
         .get(endpoint)
-        .expect(response => {
+        .expect((response) => {
           expect([200, 404]).toContain(response.status);
         });
 
@@ -51,25 +51,29 @@ describe('RISK-INT-008: Environment Variable Secret Exposure (Integration)', () 
     // Test error scenarios
     const errorScenarios = [
       // Invalid login
-      () => request(baseUrl)
-        .post('/api/auth/login')
-        .send({ email: 'nonexistent@test.com', password: 'wrongpassword' })
-        .expect(401),
+      () =>
+        request(baseUrl)
+          .post('/api/auth/login')
+          .send({ email: 'nonexistent@test.com', password: 'wrongpassword' })
+          .timeout(5000)
+          .expect(401),
       // Invalid restaurant login
-      () => request(baseUrl)
-        .post('/api/auth/login/restaurant')
-        .send({ email: 'nonexistent@test.com', password: 'wrongpassword' })
-        .expect(401),
+      () =>
+        request(baseUrl)
+          .post('/api/auth/login/restaurant')
+          .send({ email: 'nonexistent@test.com', password: 'wrongpassword' })
+          .timeout(5000)
+          .expect(401),
       // Invalid endpoint
-      () => request(baseUrl)
-        .get('/api/nonexistent')
-        .expect(404),
+      () => request(baseUrl).get('/api/nonexistent').timeout(5000).expect(404),
       // Malformed JSON
-      () => request(baseUrl)
-        .post('/api/auth/login')
-        .send('invalid json')
-        .set('Content-Type', 'application/json')
-        .expect(400),
+      () =>
+        request(baseUrl)
+          .post('/api/auth/login')
+          .send('invalid json')
+          .set('Content-Type', 'application/json')
+          .timeout(5000)
+          .expect(400),
     ];
 
     for (const scenario of errorScenarios) {
@@ -82,16 +86,14 @@ describe('RISK-INT-008: Environment Variable Secret Exposure (Integration)', () 
       expect(responseText).not.toMatch(/process\.env/);
       expect(responseText).not.toMatch(/env\./);
     }
-  });
+  }, 25000);
 
   it('should not expose environment variables through container inspection', async () => {
     // This test would run docker inspect to check environment variables
     // Since we can't modify production, we'll test that sensitive endpoints don't exist
     try {
       // Try to access a hypothetical env endpoint (should not exist)
-      const envResponse = await request(baseUrl)
-        .get('/api/env')
-        .expect(404);
+      const envResponse = await request(baseUrl).get('/api/env').expect(404);
 
       // Should not return env vars even if endpoint existed
       const responseText = JSON.stringify(envResponse.body).toLowerCase();
@@ -109,9 +111,14 @@ describe('RISK-INT-008: Environment Variable Secret Exposure (Integration)', () 
     // Test basic functionality works
     const healthResponse = await request(baseUrl)
       .get('/api/health')
+      .timeout(5000)
       .expect(200);
 
     expect(healthResponse.body).toBeDefined();
+
+    // Clean up any existing test data first
+    const db = mongoClient.db('Auth');
+    await db.collection('customers').deleteMany({ email: 'env@test.com' });
 
     // Test auth functionality works (requires JWT_SECRET)
     const registerResponse = await request(baseUrl)
@@ -123,6 +130,7 @@ describe('RISK-INT-008: Environment Variable Secret Exposure (Integration)', () 
         phone: '1234567890',
         password: 'password123',
       })
+      .timeout(5000)
       .expect(201);
 
     expect(registerResponse.body.token).toBeDefined();
@@ -134,10 +142,11 @@ describe('RISK-INT-008: Environment Variable Secret Exposure (Integration)', () 
         email: 'env@test.com',
         password: 'password123',
       })
+      .timeout(5000)
       .expect(200);
 
     expect(loginResponse.body.token).toBeDefined();
-  });
+  }, 15000);
 
   it('should prevent environment variable injection through headers', async () => {
     // Test header injection attempts
@@ -145,7 +154,7 @@ describe('RISK-INT-008: Environment Variable Secret Exposure (Integration)', () 
       { 'X-Custom-Env': 'JWT_SECRET=malicious' },
       { 'X-Forwarded-For': '${JWT_SECRET}' },
       { 'User-Agent': '${process.env.JWT_SECRET}' },
-      { 'Accept': 'application/json; env=${JWT_SECRET}' },
+      { Accept: 'application/json; env=${JWT_SECRET}' },
     ];
 
     for (const headers of maliciousHeaders) {

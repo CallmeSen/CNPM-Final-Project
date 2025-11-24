@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { JwtService } from '@nestjs/jwt';
-import { ConflictException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Customer } from '../schemas/customer.schema';
 import { Restaurant } from '../schemas/restaurant.schema';
@@ -105,11 +109,15 @@ describe('AuthService', () => {
         password: 'password123',
       };
 
-      customerModel.findOne.mockResolvedValue({ email: 'existing@example.com' });
+      customerModel.findOne.mockResolvedValue({
+        email: 'existing@example.com',
+      });
 
       // WHEN: Calling registerCustomer
       // THEN: Should throw ConflictException
-      await expect(service.registerCustomer(dto)).rejects.toThrow(ConflictException);
+      await expect(service.registerCustomer(dto)).rejects.toThrow(
+        ConflictException,
+      );
       expect(customerModel.findOne).toHaveBeenCalledWith({ email: dto.email });
     });
   });
@@ -185,7 +193,9 @@ describe('AuthService', () => {
 
       // WHEN: Calling loginCustomer
       // THEN: Should throw UnauthorizedException
-      await expect(service.loginCustomer(dto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.loginCustomer(dto)).rejects.toThrow(
+        UnauthorizedException,
+      );
       expect(customerModel.findOne).toHaveBeenCalledWith({ email: dto.email });
       expect(mockQuery.select).toHaveBeenCalledWith('+password');
       expect(mockCustomer.comparePassword).toHaveBeenCalledWith(dto.password);
@@ -202,7 +212,9 @@ describe('AuthService', () => {
 
       // WHEN: Calling getProfile
       // THEN: Should throw NotFoundException
-      await expect(service.getProfile(customerId)).rejects.toThrow(NotFoundException);
+      await expect(service.getProfile(customerId)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(customerModel.findById).toHaveBeenCalledWith(customerId);
     });
   });
@@ -287,11 +299,15 @@ describe('AuthService', () => {
       };
       const profilePicture = '/uploads/test.jpg';
 
-      restaurantModel.findOne.mockResolvedValue({ name: 'Existing Restaurant' });
+      restaurantModel.findOne.mockResolvedValue({
+        name: 'Existing Restaurant',
+      });
 
       // WHEN: Calling registerRestaurant
       // THEN: Should throw ConflictException
-      await expect(service.registerRestaurant(dto, profilePicture)).rejects.toThrow(ConflictException);
+      await expect(
+        service.registerRestaurant(dto, profilePicture),
+      ).rejects.toThrow(ConflictException);
       expect(restaurantModel.findOne).toHaveBeenCalledWith({
         $or: [{ name: dto.name }, { 'admin.email': dto.email }],
       });
@@ -317,9 +333,15 @@ describe('AuthService', () => {
 
       // WHEN: Calling loginRestaurant
       // THEN: Should throw UnauthorizedException
-      await expect(service.loginRestaurant(dto)).rejects.toThrow(UnauthorizedException);
-      expect(restaurantModel.findOne).toHaveBeenCalledWith({ 'admin.email': dto.email });
-      expect(mockRestaurant.compareAdminPassword).toHaveBeenCalledWith(dto.password);
+      await expect(service.loginRestaurant(dto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(restaurantModel.findOne).toHaveBeenCalledWith({
+        'admin.email': dto.email,
+      });
+      expect(mockRestaurant.compareAdminPassword).toHaveBeenCalledWith(
+        dto.password,
+      );
     });
   });
 });

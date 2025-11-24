@@ -43,8 +43,11 @@ export class PaymentController {
         typeof rawPhone === 'string' ? rawPhone.trim() : '';
 
       this.logger.log(`🔵 Processing payment request for order ${orderId}`);
-      this.logger.log(`📦 Full payment request body:`, JSON.stringify(body, null, 2));
-      
+      this.logger.log(
+        `📦 Full payment request body:`,
+        JSON.stringify(body, null, 2),
+      );
+
       if (!sanitizedPhone) {
         this.logger.warn(
           `No phone number provided for order ${orderId}. SMS notifications will be skipped.`,
@@ -119,9 +122,7 @@ export class PaymentController {
         status: 'Pending',
         stripePaymentIntentId: paymentIntent.id,
         stripeClientSecret: paymentIntent.client_secret,
-        ...(sanitizedPhone
-          ? { phone: sanitizedPhone }
-          : {}),
+        ...(sanitizedPhone ? { phone: sanitizedPhone } : {}),
         email,
       } as Payment);
 

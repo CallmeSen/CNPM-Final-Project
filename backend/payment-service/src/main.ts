@@ -3,10 +3,14 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
+import { MetricsMiddleware } from './common/metrics.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+
+  // Apply metrics middleware globally
+  app.use(new MetricsMiddleware().use.bind(new MetricsMiddleware()));
 
   const frontendOrigin =
     configService.get('FRONTEND_ORIGIN') ?? 'http://localhost:3000';
@@ -16,7 +20,9 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const stripeWebhookPath = '/api/payment/webhook';
+  app.setGlobalPrefix('api');
+
+  const stripeWebhookPath = '/payment/webhook';
 
   app.use(
     json({
