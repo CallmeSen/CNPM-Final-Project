@@ -155,7 +155,7 @@ jobs:
           }
           
           # Push to Loki
-          $response = curl -sS -w "`n%{http_code}" -X POST @curlAuth `
+          $response = curl.exe -sS -w "`n%{http_code}" -X POST @curlAuth `
             -H "Content-Type: application/json" `
             $env:LOKI_URL `
             --data-binary "@loki-payload.json" 2>&1
@@ -276,7 +276,7 @@ jobs:
             $curlAuth = @("-u", "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}")
           }
           
-          $response = curl -sS -w "`n%{http_code}" -X POST @curlAuth `
+          $response = curl.exe -sS -w "`n%{http_code}" -X POST @curlAuth `
             -H "Content-Type: application/json" `
             $env:LOKI_URL `
             --data-binary "@loki-payload.json" 2>&1
@@ -393,7 +393,7 @@ jobs:
             $curlAuth = @("-u", "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}")
           }
           
-          $response = curl -sS -w "`n%{http_code}" -X POST @curlAuth `
+          $response = curl.exe -sS -w "`n%{http_code}" -X POST @curlAuth `
             -H "Content-Type: application/json" `
             $env:LOKI_URL `
             --data-binary "@loki-payload.json" 2>&1
@@ -510,7 +510,7 @@ jobs:
             $curlAuth = @("-u", "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}")
           }
           
-          $response = curl -sS -w "`n%{http_code}" -X POST @curlAuth `
+          $response = curl.exe -sS -w "`n%{http_code}" -X POST @curlAuth `
             -H "Content-Type: application/json" `
             $env:LOKI_URL `
             --data-binary "@loki-payload.json" 2>&1
