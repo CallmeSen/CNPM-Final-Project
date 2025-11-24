@@ -129,63 +129,19 @@ jobs:
           
           Write-Host "📤 Pushing Auth Service logs to Loki..." -ForegroundColor Cyan
           
-          # Generate Loki payload using Python
-          $pythonScript = @"
-          import json
-          import os
-          import time
-          import sys
-          from pathlib import Path
+          # Generate Python script for Loki payload
+          $script = 'import json,os,time,sys;from pathlib import Path;log_file="auth-integration-test.log";'
+          $script += 'exit(0) if not Path(log_file).exists() else None;'
+          $script += 'f=open(log_file,"r",encoding="utf-8",errors="ignore");content=f.read();f.close();'
+          $script += 'test_status="passed" if "PASSED" in content else ("failed" if "FAILED" in content else "unknown");'
+          $script += 'labels={"job":"integration-tests","service":"auth","repo":os.environ.get("GITHUB_REPOSITORY","unknown"),"workflow":os.environ.get("GITHUB_WORKFLOW","unknown"),"run_id":os.environ.get("GITHUB_RUN_ID","unknown"),"run_number":os.environ.get("GITHUB_RUN_NUMBER","unknown"),"branch":os.environ.get("GITHUB_REF_NAME","unknown"),"commit":os.environ.get("GITHUB_SHA","unknown")[:7],"test_status":test_status,"log_type":"integration-test","environment":"ci"};'
+          $script += 'values=[];base_ts=int(time.time()*1e9);'
+          $script += 'f=open(log_file,"r",encoding="utf-8",errors="ignore");lines=f.readlines();f.close();'
+          $script += '[values.append([str(base_ts+idx*1000),line.rstrip()]) for idx,line in enumerate(lines)];'
+          $script += 'f=open("loki-payload.json","w",encoding="utf-8");json.dump({"streams":[{"stream":labels,"values":values}]},f);f.close();'
+          $script += 'print(f"Prepared {len(values)} log lines (status: {test_status})")'
           
-          log_file = 'auth-integration-test.log'
-          if not Path(log_file).exists():
-              print('Log file not found')
-              sys.exit(0)
-          
-          test_status = 'unknown'
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-              content = f.read()
-              if 'PASSED' in content:
-                  test_status = 'passed'
-              elif 'FAILED' in content:
-                  test_status = 'failed'
-          
-          labels = {
-              'job': 'integration-tests',
-              'service': 'auth',
-              'repo': os.environ.get('GITHUB_REPOSITORY', 'unknown'),
-              'workflow': os.environ.get('GITHUB_WORKFLOW', 'unknown'),
-              'run_id': os.environ.get('GITHUB_RUN_ID', 'unknown'),
-              'run_number': os.environ.get('GITHUB_RUN_NUMBER', 'unknown'),
-              'branch': os.environ.get('GITHUB_REF_NAME', 'unknown'),
-              'commit': os.environ.get('GITHUB_SHA', 'unknown')[:7],
-              'test_status': test_status,
-              'log_type': 'integration-test',
-              'environment': 'ci'
-          }
-          
-          values = []
-          base_ts = int(time.time() * 1e9)
-          
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-              for idx, line in enumerate(f):
-                  ts = str(base_ts + idx * 1000)
-                  values.append([ts, line.rstrip()])
-          
-          payload = {
-              'streams': [{
-                  'stream': labels,
-                  'values': values
-              }]
-          }
-          
-          with open('loki-payload.json', 'w', encoding='utf-8') as f:
-              json.dump(payload, f)
-          
-          print('Prepared ' + str(len(values)) + ' log lines (status: ' + test_status + ')')
-          "@
-          
-          $pythonScript | python
+          python -c $script
           
           if (-not (Test-Path "loki-payload.json")) {
             Write-Host "❌ Failed to generate payload" -ForegroundColor Red
@@ -297,44 +253,18 @@ jobs:
           
           Write-Host "📤 Pushing Restaurant Service logs to Loki..." -ForegroundColor Cyan
           
-          $pythonScript = @"
-          import json, os, time, sys
-          from pathlib import Path
+          $script = 'import json,os,time,sys;from pathlib import Path;log_file="restaurant-integration-test.log";'
+          $script += 'exit(0) if not Path(log_file).exists() else None;'
+          $script += 'f=open(log_file,"r",encoding="utf-8",errors="ignore");content=f.read();f.close();'
+          $script += 'test_status="passed" if "PASSED" in content else ("failed" if "FAILED" in content else "unknown");'
+          $script += 'labels={"job":"integration-tests","service":"restaurant","repo":os.environ.get("GITHUB_REPOSITORY","unknown"),"workflow":os.environ.get("GITHUB_WORKFLOW","unknown"),"run_id":os.environ.get("GITHUB_RUN_ID","unknown"),"run_number":os.environ.get("GITHUB_RUN_NUMBER","unknown"),"branch":os.environ.get("GITHUB_REF_NAME","unknown"),"commit":os.environ.get("GITHUB_SHA","unknown")[:7],"test_status":test_status,"log_type":"integration-test","environment":"ci"};'
+          $script += 'values=[];base_ts=int(time.time()*1e9);'
+          $script += 'f=open(log_file,"r",encoding="utf-8",errors="ignore");lines=f.readlines();f.close();'
+          $script += '[values.append([str(base_ts+idx*1000),line.rstrip()]) for idx,line in enumerate(lines)];'
+          $script += 'f=open("loki-payload.json","w",encoding="utf-8");json.dump({"streams":[{"stream":labels,"values":values}]},f);f.close();'
+          $script += 'print(f"Prepared {len(values)} log lines (status: {test_status})")'
           
-          log_file = 'restaurant-integration-test.log'
-          if not Path(log_file).exists():
-              sys.exit(0)
-          
-          test_status = 'unknown'
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-              content = f.read()
-              if 'PASSED' in content: test_status = 'passed'
-              elif 'FAILED' in content: test_status = 'failed'
-          
-          labels = {
-              'job': 'integration-tests', 'service': 'restaurant',
-              'repo': os.environ.get('GITHUB_REPOSITORY', 'unknown'),
-              'workflow': os.environ.get('GITHUB_WORKFLOW', 'unknown'),
-              'run_id': os.environ.get('GITHUB_RUN_ID', 'unknown'),
-              'run_number': os.environ.get('GITHUB_RUN_NUMBER', 'unknown'),
-              'branch': os.environ.get('GITHUB_REF_NAME', 'unknown'),
-              'commit': os.environ.get('GITHUB_SHA', 'unknown')[:7],
-              'test_status': test_status, 'log_type': 'integration-test', 'environment': 'ci'
-          }
-          
-          values = []
-          base_ts = int(time.time() * 1e9)
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-              for idx, line in enumerate(f):
-                  values.append([str(base_ts + idx * 1000), line.rstrip()])
-          
-          with open('loki-payload.json', 'w', encoding='utf-8') as f:
-              json.dump({'streams': [{'stream': labels, 'values': values}]}, f)
-          
-          print('Prepared ' + str(len(values)) + ' log lines (status: ' + test_status + ')')
-          "@
-          
-          $pythonScript | python
+          python -c $script
           
           if (-not (Test-Path "loki-payload.json")) {
             Write-Host "❌ Failed to generate payload" -ForegroundColor Red
@@ -440,44 +370,18 @@ jobs:
           
           Write-Host "📤 Pushing Order Service logs to Loki..." -ForegroundColor Cyan
           
-          $pythonScript = @"
-          import json, os, time, sys
-          from pathlib import Path
+          $script = 'import json,os,time,sys;from pathlib import Path;log_file="order-integration-test.log";'
+          $script += 'exit(0) if not Path(log_file).exists() else None;'
+          $script += 'f=open(log_file,"r",encoding="utf-8",errors="ignore");content=f.read();f.close();'
+          $script += 'test_status="passed" if "PASSED" in content else ("failed" if "FAILED" in content else "unknown");'
+          $script += 'labels={"job":"integration-tests","service":"order","repo":os.environ.get("GITHUB_REPOSITORY","unknown"),"workflow":os.environ.get("GITHUB_WORKFLOW","unknown"),"run_id":os.environ.get("GITHUB_RUN_ID","unknown"),"run_number":os.environ.get("GITHUB_RUN_NUMBER","unknown"),"branch":os.environ.get("GITHUB_REF_NAME","unknown"),"commit":os.environ.get("GITHUB_SHA","unknown")[:7],"test_status":test_status,"log_type":"integration-test","environment":"ci"};'
+          $script += 'values=[];base_ts=int(time.time()*1e9);'
+          $script += 'f=open(log_file,"r",encoding="utf-8",errors="ignore");lines=f.readlines();f.close();'
+          $script += '[values.append([str(base_ts+idx*1000),line.rstrip()]) for idx,line in enumerate(lines)];'
+          $script += 'f=open("loki-payload.json","w",encoding="utf-8");json.dump({"streams":[{"stream":labels,"values":values}]},f);f.close();'
+          $script += 'print(f"Prepared {len(values)} log lines (status: {test_status})")'
           
-          log_file = 'order-integration-test.log'
-          if not Path(log_file).exists():
-              sys.exit(0)
-          
-          test_status = 'unknown'
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-              content = f.read()
-              if 'PASSED' in content: test_status = 'passed'
-              elif 'FAILED' in content: test_status = 'failed'
-          
-          labels = {
-              'job': 'integration-tests', 'service': 'order',
-              'repo': os.environ.get('GITHUB_REPOSITORY', 'unknown'),
-              'workflow': os.environ.get('GITHUB_WORKFLOW', 'unknown'),
-              'run_id': os.environ.get('GITHUB_RUN_ID', 'unknown'),
-              'run_number': os.environ.get('GITHUB_RUN_NUMBER', 'unknown'),
-              'branch': os.environ.get('GITHUB_REF_NAME', 'unknown'),
-              'commit': os.environ.get('GITHUB_SHA', 'unknown')[:7],
-              'test_status': test_status, 'log_type': 'integration-test', 'environment': 'ci'
-          }
-          
-          values = []
-          base_ts = int(time.time() * 1e9)
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-              for idx, line in enumerate(f):
-                  values.append([str(base_ts + idx * 1000), line.rstrip()])
-          
-          with open('loki-payload.json', 'w', encoding='utf-8') as f:
-              json.dump({'streams': [{'stream': labels, 'values': values}]}, f)
-          
-          print('Prepared ' + str(len(values)) + ' log lines (status: ' + test_status + ')')
-          "@
-          
-          $pythonScript | python
+          python -c $script
           
           if (-not (Test-Path "loki-payload.json")) {
             Write-Host "❌ Failed to generate payload" -ForegroundColor Red
@@ -583,44 +487,18 @@ jobs:
           
           Write-Host "📤 Pushing Payment Service logs to Loki..." -ForegroundColor Cyan
           
-          $pythonScript = @"
-          import json, os, time, sys
-          from pathlib import Path
+          $script = 'import json,os,time,sys;from pathlib import Path;log_file="payment-integration-test.log";'
+          $script += 'exit(0) if not Path(log_file).exists() else None;'
+          $script += 'f=open(log_file,"r",encoding="utf-8",errors="ignore");content=f.read();f.close();'
+          $script += 'test_status="passed" if "PASSED" in content else ("failed" if "FAILED" in content else "unknown");'
+          $script += 'labels={"job":"integration-tests","service":"payment","repo":os.environ.get("GITHUB_REPOSITORY","unknown"),"workflow":os.environ.get("GITHUB_WORKFLOW","unknown"),"run_id":os.environ.get("GITHUB_RUN_ID","unknown"),"run_number":os.environ.get("GITHUB_RUN_NUMBER","unknown"),"branch":os.environ.get("GITHUB_REF_NAME","unknown"),"commit":os.environ.get("GITHUB_SHA","unknown")[:7],"test_status":test_status,"log_type":"integration-test","environment":"ci"};'
+          $script += 'values=[];base_ts=int(time.time()*1e9);'
+          $script += 'f=open(log_file,"r",encoding="utf-8",errors="ignore");lines=f.readlines();f.close();'
+          $script += '[values.append([str(base_ts+idx*1000),line.rstrip()]) for idx,line in enumerate(lines)];'
+          $script += 'f=open("loki-payload.json","w",encoding="utf-8");json.dump({"streams":[{"stream":labels,"values":values}]},f);f.close();'
+          $script += 'print(f"Prepared {len(values)} log lines (status: {test_status})")'
           
-          log_file = 'payment-integration-test.log'
-          if not Path(log_file).exists():
-              sys.exit(0)
-          
-          test_status = 'unknown'
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-              content = f.read()
-              if 'PASSED' in content: test_status = 'passed'
-              elif 'FAILED' in content: test_status = 'failed'
-          
-          labels = {
-              'job': 'integration-tests', 'service': 'payment',
-              'repo': os.environ.get('GITHUB_REPOSITORY', 'unknown'),
-              'workflow': os.environ.get('GITHUB_WORKFLOW', 'unknown'),
-              'run_id': os.environ.get('GITHUB_RUN_ID', 'unknown'),
-              'run_number': os.environ.get('GITHUB_RUN_NUMBER', 'unknown'),
-              'branch': os.environ.get('GITHUB_REF_NAME', 'unknown'),
-              'commit': os.environ.get('GITHUB_SHA', 'unknown')[:7],
-              'test_status': test_status, 'log_type': 'integration-test', 'environment': 'ci'
-          }
-          
-          values = []
-          base_ts = int(time.time() * 1e9)
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-              for idx, line in enumerate(f):
-                  values.append([str(base_ts + idx * 1000), line.rstrip()])
-          
-          with open('loki-payload.json', 'w', encoding='utf-8') as f:
-              json.dump({'streams': [{'stream': labels, 'values': values}]}, f)
-          
-          print('Prepared ' + str(len(values)) + ' log lines (status: ' + test_status + ')')
-          "@
-          
-          $pythonScript | python
+          python -c $script
           
           if (-not (Test-Path "loki-payload.json")) {
             Write-Host "❌ Failed to generate payload" -ForegroundColor Red
