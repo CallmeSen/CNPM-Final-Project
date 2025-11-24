@@ -118,16 +118,16 @@ jobs:
           LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
         run: |
           if (-not $env:LOKI_URL) {
-            Write-Host "⚠️  LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
+            Write-Host "WARNING: LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
             exit 0
           }
           
           if (-not (Test-Path "auth-integration-test.log")) {
-            Write-Host "⚠️  Log file not found" -ForegroundColor Yellow
+            Write-Host "WARNING: Log file not found" -ForegroundColor Yellow
             exit 0
           }
           
-          Write-Host "📤 Pushing Auth Service logs to Loki..." -ForegroundColor Cyan
+          Write-Host "Pushing Auth Service logs to Loki..." -ForegroundColor Cyan
           
           # Generate Python script for Loki payload
           $script = 'import json,os,time,sys;from pathlib import Path;log_file="auth-integration-test.log";'
@@ -144,7 +144,7 @@ jobs:
           python -c $script
           
           if (-not (Test-Path "loki-payload.json")) {
-            Write-Host "❌ Failed to generate payload" -ForegroundColor Red
+            Write-Host "ERROR: Failed to generate payload" -ForegroundColor Red
             exit 1
           }
           
@@ -164,9 +164,9 @@ jobs:
           $httpCode = $lines[-1]
           
           if ($httpCode -eq "204" -or $httpCode -eq "200") {
-            Write-Host "✅ Successfully pushed Auth logs to Loki (HTTP $httpCode)" -ForegroundColor Green
+            Write-Host "SUCCESS: Pushed Auth logs to Loki (HTTP $httpCode)" -ForegroundColor Green
           } else {
-            Write-Host "❌ Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
+            Write-Host "ERROR: Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
             Write-Host "Response: $($lines[0..$($lines.Length-2)] -join "`n")"
             exit 1
           }
@@ -242,16 +242,16 @@ jobs:
           LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
         run: |
           if (-not $env:LOKI_URL) {
-            Write-Host "⚠️  LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
+            Write-Host "WARNING: LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
             exit 0
           }
           
           if (-not (Test-Path "restaurant-integration-test.log")) {
-            Write-Host "⚠️  Log file not found" -ForegroundColor Yellow
+            Write-Host "WARNING: Log file not found" -ForegroundColor Yellow
             exit 0
           }
           
-          Write-Host "📤 Pushing Restaurant Service logs to Loki..." -ForegroundColor Cyan
+          Write-Host "Pushing Restaurant Service logs to Loki..." -ForegroundColor Cyan
           
           $script = 'import json,os,time,sys;from pathlib import Path;log_file="restaurant-integration-test.log";'
           $script += 'exit(0) if not Path(log_file).exists() else None;'
@@ -267,7 +267,7 @@ jobs:
           python -c $script
           
           if (-not (Test-Path "loki-payload.json")) {
-            Write-Host "❌ Failed to generate payload" -ForegroundColor Red
+            Write-Host "ERROR: Failed to generate payload" -ForegroundColor Red
             exit 1
           }
           
@@ -285,9 +285,9 @@ jobs:
           $httpCode = $lines[-1]
           
           if ($httpCode -eq "204" -or $httpCode -eq "200") {
-            Write-Host "✅ Successfully pushed Restaurant logs to Loki (HTTP $httpCode)" -ForegroundColor Green
+            Write-Host "SUCCESS: Pushed Restaurant logs to Loki (HTTP $httpCode)" -ForegroundColor Green
           } else {
-            Write-Host "❌ Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
+            Write-Host "ERROR: Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
             exit 1
           }
 
@@ -359,16 +359,16 @@ jobs:
           LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
         run: |
           if (-not $env:LOKI_URL) {
-            Write-Host "⚠️  LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
+            Write-Host "WARNING: LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
             exit 0
           }
           
           if (-not (Test-Path "order-integration-test.log")) {
-            Write-Host "⚠️  Log file not found" -ForegroundColor Yellow
+            Write-Host "WARNING: Log file not found" -ForegroundColor Yellow
             exit 0
           }
           
-          Write-Host "📤 Pushing Order Service logs to Loki..." -ForegroundColor Cyan
+          Write-Host "Pushing Order Service logs to Loki..." -ForegroundColor Cyan
           
           $script = 'import json,os,time,sys;from pathlib import Path;log_file="order-integration-test.log";'
           $script += 'exit(0) if not Path(log_file).exists() else None;'
@@ -384,7 +384,7 @@ jobs:
           python -c $script
           
           if (-not (Test-Path "loki-payload.json")) {
-            Write-Host "❌ Failed to generate payload" -ForegroundColor Red
+            Write-Host "ERROR: Failed to generate payload" -ForegroundColor Red
             exit 1
           }
           
@@ -402,9 +402,9 @@ jobs:
           $httpCode = $lines[-1]
           
           if ($httpCode -eq "204" -or $httpCode -eq "200") {
-            Write-Host "✅ Successfully pushed Order logs to Loki (HTTP $httpCode)" -ForegroundColor Green
+            Write-Host "SUCCESS: Pushed Order logs to Loki (HTTP $httpCode)" -ForegroundColor Green
           } else {
-            Write-Host "❌ Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
+            Write-Host "ERROR: Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
             exit 1
           }
 
@@ -476,16 +476,16 @@ jobs:
           LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
         run: |
           if (-not $env:LOKI_URL) {
-            Write-Host "⚠️  LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
+            Write-Host "WARNING: LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
             exit 0
           }
           
           if (-not (Test-Path "payment-integration-test.log")) {
-            Write-Host "⚠️  Log file not found" -ForegroundColor Yellow
+            Write-Host "WARNING: Log file not found" -ForegroundColor Yellow
             exit 0
           }
           
-          Write-Host "📤 Pushing Payment Service logs to Loki..." -ForegroundColor Cyan
+          Write-Host "Pushing Payment Service logs to Loki..." -ForegroundColor Cyan
           
           $script = 'import json,os,time,sys;from pathlib import Path;log_file="payment-integration-test.log";'
           $script += 'exit(0) if not Path(log_file).exists() else None;'
@@ -501,7 +501,7 @@ jobs:
           python -c $script
           
           if (-not (Test-Path "loki-payload.json")) {
-            Write-Host "❌ Failed to generate payload" -ForegroundColor Red
+            Write-Host "ERROR: Failed to generate payload" -ForegroundColor Red
             exit 1
           }
           
@@ -519,8 +519,8 @@ jobs:
           $httpCode = $lines[-1]
           
           if ($httpCode -eq "204" -or $httpCode -eq "200") {
-            Write-Host "✅ Successfully pushed Payment logs to Loki (HTTP $httpCode)" -ForegroundColor Green
+            Write-Host "SUCCESS: Pushed Payment logs to Loki (HTTP $httpCode)" -ForegroundColor Green
           } else {
-            Write-Host "❌ Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
+            Write-Host "ERROR: Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
             exit 1
           }
