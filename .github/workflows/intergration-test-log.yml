@@ -110,26 +110,27 @@ jobs:
 
       - name: Push Auth Logs to Loki
         if: always()
-        shell: bash
+        shell: powershell
         working-directory: backend/auth-service
         env:
           LOKI_URL: ${{ secrets.LOKI_URL }}
           LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
           LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
         run: |
-          if [ -z "$LOKI_URL" ]; then
-            echo "⚠️  LOKI_URL not configured, skipping log export"
+          if (-not $env:LOKI_URL) {
+            Write-Host "⚠️  LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
             exit 0
-          fi
+          }
           
-          if [ ! -f "auth-integration-test.log" ]; then
-            echo "⚠️  Log file not found"
+          if (-not (Test-Path "auth-integration-test.log")) {
+            Write-Host "⚠️  Log file not found" -ForegroundColor Yellow
             exit 0
-          fi
+          }
           
-          echo "📤 Pushing Auth Service logs to Loki..."
+          Write-Host "📤 Pushing Auth Service logs to Loki..." -ForegroundColor Cyan
           
-          python3 - <<'EOF'
+          # Generate Loki payload using Python
+          $pythonScript = @'
           import json
           import os
           import time
@@ -141,9 +142,8 @@ jobs:
               print(f"Log file {log_file} not found")
               sys.exit(0)
           
-          # Determine test status from log
           test_status = "unknown"
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
               content = f.read()
               if "PASSED" in content:
                   test_status = "passed"
@@ -167,7 +167,7 @@ jobs:
           values = []
           base_ts = int(time.time() * 1e9)
           
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
               for idx, line in enumerate(f):
                   ts = str(base_ts + idx * 1000)
                   values.append([ts, line.rstrip()])
@@ -183,31 +183,37 @@ jobs:
               json.dump(payload, f)
           
           print(f"✓ Prepared {len(values)} log lines for Loki (status: {test_status})")
-          EOF
+          '@
           
-          if [ ! -f "loki-payload.json" ]; then
-            echo "❌ Failed to generate payload"
+          $pythonScript | python
+          
+          if (-not (Test-Path "loki-payload.json")) {
+            Write-Host "❌ Failed to generate payload" -ForegroundColor Red
             exit 1
-          fi
+          }
           
-          CURL_AUTH=""
-          if [ -n "${LOKI_USERNAME:-}" ]; then
-            CURL_AUTH="--user ${LOKI_USERNAME}:${LOKI_PASSWORD}"
-          fi
+          # Prepare curl authentication
+          $curlAuth = @()
+          if ($env:LOKI_USERNAME) {
+            $curlAuth = @("-u", "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}")
+          }
           
-          response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
-            -H "Content-Type: application/json" \
-            "${LOKI_URL}" \
-            --data-binary @loki-payload.json)
+          # Push to Loki
+          $response = curl -sS -w "`n%{http_code}" -X POST @curlAuth `
+            -H "Content-Type: application/json" `
+            $env:LOKI_URL `
+            --data-binary "@loki-payload.json" 2>&1
           
-          http_code=$(echo "$response" | tail -n1)
+          $lines = $response -split "`n"
+          $httpCode = $lines[-1]
           
-          if [ "$http_code" = "204" ] || [ "$http_code" = "200" ]; then
-            echo "✅ Successfully pushed Auth logs to Loki (HTTP $http_code)"
-          else
-            echo "❌ Failed to push logs (HTTP $http_code)"
+          if ($httpCode -eq "204" -or $httpCode -eq "200") {
+            Write-Host "✅ Successfully pushed Auth logs to Loki (HTTP $httpCode)" -ForegroundColor Green
+          } else {
+            Write-Host "❌ Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
+            Write-Host "Response: $($lines[0..$($lines.Length-2)] -join "`n")"
             exit 1
-          fi
+          }
 
   restaurant-integration-test:
     name: Restaurant Service Integration Test
@@ -272,103 +278,88 @@ jobs:
 
       - name: Push Restaurant Logs to Loki
         if: always()
-        shell: bash
+        shell: powershell
         working-directory: backend/restaurant-service
         env:
           LOKI_URL: ${{ secrets.LOKI_URL }}
           LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
           LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
         run: |
-          if [ -z "$LOKI_URL" ]; then
-            echo "⚠️  LOKI_URL not configured, skipping log export"
+          if (-not $env:LOKI_URL) {
+            Write-Host "⚠️  LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
             exit 0
-          fi
+          }
           
-          if [ ! -f "restaurant-integration-test.log" ]; then
-            echo "⚠️  Log file not found"
+          if (-not (Test-Path "restaurant-integration-test.log")) {
+            Write-Host "⚠️  Log file not found" -ForegroundColor Yellow
             exit 0
-          fi
+          }
           
-          echo "📤 Pushing Restaurant Service logs to Loki..."
+          Write-Host "📤 Pushing Restaurant Service logs to Loki..." -ForegroundColor Cyan
           
-          python3 - <<'EOF'
-          import json
-          import os
-          import time
-          import sys
+          $pythonScript = @'
+          import json, os, time, sys
           from pathlib import Path
           
           log_file = "restaurant-integration-test.log"
           if not Path(log_file).exists():
-              print(f"Log file {log_file} not found")
               sys.exit(0)
           
           test_status = "unknown"
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
               content = f.read()
-              if "PASSED" in content:
-                  test_status = "passed"
-              elif "FAILED" in content:
-                  test_status = "failed"
+              if "PASSED" in content: test_status = "passed"
+              elif "FAILED" in content: test_status = "failed"
           
           labels = {
-              "job": "integration-tests",
-              "service": "restaurant",
+              "job": "integration-tests", "service": "restaurant",
               "repo": os.environ.get("GITHUB_REPOSITORY", "unknown"),
               "workflow": os.environ.get("GITHUB_WORKFLOW", "unknown"),
               "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
               "run_number": os.environ.get("GITHUB_RUN_NUMBER", "unknown"),
               "branch": os.environ.get("GITHUB_REF_NAME", "unknown"),
               "commit": os.environ.get("GITHUB_SHA", "unknown")[:7],
-              "test_status": test_status,
-              "log_type": "integration-test",
-              "environment": "ci"
+              "test_status": test_status, "log_type": "integration-test", "environment": "ci"
           }
           
           values = []
           base_ts = int(time.time() * 1e9)
-          
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
               for idx, line in enumerate(f):
-                  ts = str(base_ts + idx * 1000)
-                  values.append([ts, line.rstrip()])
-          
-          payload = {
-              "streams": [{
-                  "stream": labels,
-                  "values": values
-              }]
-          }
+                  values.append([str(base_ts + idx * 1000), line.rstrip()])
           
           with open("loki-payload.json", "w", encoding="utf-8") as f:
-              json.dump(payload, f)
+              json.dump({"streams": [{"stream": labels, "values": values}]}, f)
           
-          print(f"✓ Prepared {len(values)} log lines for Loki (status: {test_status})")
-          EOF
+          print(f"✓ Prepared {len(values)} log lines (status: {test_status})")
+          '@
           
-          if [ ! -f "loki-payload.json" ]; then
-            echo "❌ Failed to generate payload"
+          $pythonScript | python
+          
+          if (-not (Test-Path "loki-payload.json")) {
+            Write-Host "❌ Failed to generate payload" -ForegroundColor Red
             exit 1
-          fi
+          }
           
-          CURL_AUTH=""
-          if [ -n "${LOKI_USERNAME:-}" ]; then
-            CURL_AUTH="--user ${LOKI_USERNAME}:${LOKI_PASSWORD}"
-          fi
+          $curlAuth = @()
+          if ($env:LOKI_USERNAME) {
+            $curlAuth = @("-u", "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}")
+          }
           
-          response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
-            -H "Content-Type: application/json" \
-            "${LOKI_URL}" \
-            --data-binary @loki-payload.json)
+          $response = curl -sS -w "`n%{http_code}" -X POST @curlAuth `
+            -H "Content-Type: application/json" `
+            $env:LOKI_URL `
+            --data-binary "@loki-payload.json" 2>&1
           
-          http_code=$(echo "$response" | tail -n1)
+          $lines = $response -split "`n"
+          $httpCode = $lines[-1]
           
-          if [ "$http_code" = "204" ] || [ "$http_code" = "200" ]; then
-            echo "✅ Successfully pushed Restaurant logs to Loki (HTTP $http_code)"
-          else
-            echo "❌ Failed to push logs (HTTP $http_code)"
+          if ($httpCode -eq "204" -or $httpCode -eq "200") {
+            Write-Host "✅ Successfully pushed Restaurant logs to Loki (HTTP $httpCode)" -ForegroundColor Green
+          } else {
+            Write-Host "❌ Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
             exit 1
-          fi
+          }
 
   order-integration-test:
     name: Order Service Integration Test
@@ -430,103 +421,88 @@ jobs:
 
       - name: Push Order Logs to Loki
         if: always()
-        shell: bash
+        shell: powershell
         working-directory: backend/order-service
         env:
           LOKI_URL: ${{ secrets.LOKI_URL }}
           LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
           LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
         run: |
-          if [ -z "$LOKI_URL" ]; then
-            echo "⚠️  LOKI_URL not configured, skipping log export"
+          if (-not $env:LOKI_URL) {
+            Write-Host "⚠️  LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
             exit 0
-          fi
+          }
           
-          if [ ! -f "order-integration-test.log" ]; then
-            echo "⚠️  Log file not found"
+          if (-not (Test-Path "order-integration-test.log")) {
+            Write-Host "⚠️  Log file not found" -ForegroundColor Yellow
             exit 0
-          fi
+          }
           
-          echo "📤 Pushing Order Service logs to Loki..."
+          Write-Host "📤 Pushing Order Service logs to Loki..." -ForegroundColor Cyan
           
-          python3 - <<'EOF'
-          import json
-          import os
-          import time
-          import sys
+          $pythonScript = @'
+          import json, os, time, sys
           from pathlib import Path
           
           log_file = "order-integration-test.log"
           if not Path(log_file).exists():
-              print(f"Log file {log_file} not found")
               sys.exit(0)
           
           test_status = "unknown"
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
               content = f.read()
-              if "PASSED" in content:
-                  test_status = "passed"
-              elif "FAILED" in content:
-                  test_status = "failed"
+              if "PASSED" in content: test_status = "passed"
+              elif "FAILED" in content: test_status = "failed"
           
           labels = {
-              "job": "integration-tests",
-              "service": "order",
+              "job": "integration-tests", "service": "order",
               "repo": os.environ.get("GITHUB_REPOSITORY", "unknown"),
               "workflow": os.environ.get("GITHUB_WORKFLOW", "unknown"),
               "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
               "run_number": os.environ.get("GITHUB_RUN_NUMBER", "unknown"),
               "branch": os.environ.get("GITHUB_REF_NAME", "unknown"),
               "commit": os.environ.get("GITHUB_SHA", "unknown")[:7],
-              "test_status": test_status,
-              "log_type": "integration-test",
-              "environment": "ci"
+              "test_status": test_status, "log_type": "integration-test", "environment": "ci"
           }
           
           values = []
           base_ts = int(time.time() * 1e9)
-          
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
               for idx, line in enumerate(f):
-                  ts = str(base_ts + idx * 1000)
-                  values.append([ts, line.rstrip()])
-          
-          payload = {
-              "streams": [{
-                  "stream": labels,
-                  "values": values
-              }]
-          }
+                  values.append([str(base_ts + idx * 1000), line.rstrip()])
           
           with open("loki-payload.json", "w", encoding="utf-8") as f:
-              json.dump(payload, f)
+              json.dump({"streams": [{"stream": labels, "values": values}]}, f)
           
-          print(f"✓ Prepared {len(values)} log lines for Loki (status: {test_status})")
-          EOF
+          print(f"✓ Prepared {len(values)} log lines (status: {test_status})")
+          '@
           
-          if [ ! -f "loki-payload.json" ]; then
-            echo "❌ Failed to generate payload"
+          $pythonScript | python
+          
+          if (-not (Test-Path "loki-payload.json")) {
+            Write-Host "❌ Failed to generate payload" -ForegroundColor Red
             exit 1
-          fi
+          }
           
-          CURL_AUTH=""
-          if [ -n "${LOKI_USERNAME:-}" ]; then
-            CURL_AUTH="--user ${LOKI_USERNAME}:${LOKI_PASSWORD}"
-          fi
+          $curlAuth = @()
+          if ($env:LOKI_USERNAME) {
+            $curlAuth = @("-u", "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}")
+          }
           
-          response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
-            -H "Content-Type: application/json" \
-            "${LOKI_URL}" \
-            --data-binary @loki-payload.json)
+          $response = curl -sS -w "`n%{http_code}" -X POST @curlAuth `
+            -H "Content-Type: application/json" `
+            $env:LOKI_URL `
+            --data-binary "@loki-payload.json" 2>&1
           
-          http_code=$(echo "$response" | tail -n1)
+          $lines = $response -split "`n"
+          $httpCode = $lines[-1]
           
-          if [ "$http_code" = "204" ] || [ "$http_code" = "200" ]; then
-            echo "✅ Successfully pushed Order logs to Loki (HTTP $http_code)"
-          else
-            echo "❌ Failed to push logs (HTTP $http_code)"
+          if ($httpCode -eq "204" -or $httpCode -eq "200") {
+            Write-Host "✅ Successfully pushed Order logs to Loki (HTTP $httpCode)" -ForegroundColor Green
+          } else {
+            Write-Host "❌ Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
             exit 1
-          fi
+          }
 
   payment-integration-test:
     name: Payment Service Integration Test
@@ -588,100 +564,85 @@ jobs:
 
       - name: Push Payment Logs to Loki
         if: always()
-        shell: bash
+        shell: powershell
         working-directory: backend/payment-service
         env:
           LOKI_URL: ${{ secrets.LOKI_URL }}
           LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
           LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
         run: |
-          if [ -z "$LOKI_URL" ]; then
-            echo "⚠️  LOKI_URL not configured, skipping log export"
+          if (-not $env:LOKI_URL) {
+            Write-Host "⚠️  LOKI_URL not configured, skipping log export" -ForegroundColor Yellow
             exit 0
-          fi
+          }
           
-          if [ ! -f "payment-integration-test.log" ]; then
-            echo "⚠️  Log file not found"
+          if (-not (Test-Path "payment-integration-test.log")) {
+            Write-Host "⚠️  Log file not found" -ForegroundColor Yellow
             exit 0
-          fi
+          }
           
-          echo "📤 Pushing Payment Service logs to Loki..."
+          Write-Host "📤 Pushing Payment Service logs to Loki..." -ForegroundColor Cyan
           
-          python3 - <<'EOF'
-          import json
-          import os
-          import time
-          import sys
+          $pythonScript = @'
+          import json, os, time, sys
           from pathlib import Path
           
           log_file = "payment-integration-test.log"
           if not Path(log_file).exists():
-              print(f"Log file {log_file} not found")
               sys.exit(0)
           
           test_status = "unknown"
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
               content = f.read()
-              if "PASSED" in content:
-                  test_status = "passed"
-              elif "FAILED" in content:
-                  test_status = "failed"
+              if "PASSED" in content: test_status = "passed"
+              elif "FAILED" in content: test_status = "failed"
           
           labels = {
-              "job": "integration-tests",
-              "service": "payment",
+              "job": "integration-tests", "service": "payment",
               "repo": os.environ.get("GITHUB_REPOSITORY", "unknown"),
               "workflow": os.environ.get("GITHUB_WORKFLOW", "unknown"),
               "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
               "run_number": os.environ.get("GITHUB_RUN_NUMBER", "unknown"),
               "branch": os.environ.get("GITHUB_REF_NAME", "unknown"),
               "commit": os.environ.get("GITHUB_SHA", "unknown")[:7],
-              "test_status": test_status,
-              "log_type": "integration-test",
-              "environment": "ci"
+              "test_status": test_status, "log_type": "integration-test", "environment": "ci"
           }
           
           values = []
           base_ts = int(time.time() * 1e9)
-          
-          with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+          with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
               for idx, line in enumerate(f):
-                  ts = str(base_ts + idx * 1000)
-                  values.append([ts, line.rstrip()])
-          
-          payload = {
-              "streams": [{
-                  "stream": labels,
-                  "values": values
-              }]
-          }
+                  values.append([str(base_ts + idx * 1000), line.rstrip()])
           
           with open("loki-payload.json", "w", encoding="utf-8") as f:
-              json.dump(payload, f)
+              json.dump({"streams": [{"stream": labels, "values": values}]}, f)
           
-          print(f"✓ Prepared {len(values)} log lines for Loki (status: {test_status})")
-          EOF
+          print(f"✓ Prepared {len(values)} log lines (status: {test_status})")
+          '@
           
-          if [ ! -f "loki-payload.json" ]; then
-            echo "❌ Failed to generate payload"
+          $pythonScript | python
+          
+          if (-not (Test-Path "loki-payload.json")) {
+            Write-Host "❌ Failed to generate payload" -ForegroundColor Red
             exit 1
-          fi
+          }
           
-          CURL_AUTH=""
-          if [ -n "${LOKI_USERNAME:-}" ]; then
-            CURL_AUTH="--user ${LOKI_USERNAME}:${LOKI_PASSWORD}"
-          fi
+          $curlAuth = @()
+          if ($env:LOKI_USERNAME) {
+            $curlAuth = @("-u", "${env:LOKI_USERNAME}:${env:LOKI_PASSWORD}")
+          }
           
-          response=$(curl -sS -w "\n%{http_code}" -X POST ${CURL_AUTH} \
-            -H "Content-Type: application/json" \
-            "${LOKI_URL}" \
-            --data-binary @loki-payload.json)
+          $response = curl -sS -w "`n%{http_code}" -X POST @curlAuth `
+            -H "Content-Type: application/json" `
+            $env:LOKI_URL `
+            --data-binary "@loki-payload.json" 2>&1
           
-          http_code=$(echo "$response" | tail -n1)
+          $lines = $response -split "`n"
+          $httpCode = $lines[-1]
           
-          if [ "$http_code" = "204" ] || [ "$http_code" = "200" ]; then
-            echo "✅ Successfully pushed Payment logs to Loki (HTTP $http_code)"
-          else
-            echo "❌ Failed to push logs (HTTP $http_code)"
+          if ($httpCode -eq "204" -or $httpCode -eq "200") {
+            Write-Host "✅ Successfully pushed Payment logs to Loki (HTTP $httpCode)" -ForegroundColor Green
+          } else {
+            Write-Host "❌ Failed to push logs (HTTP $httpCode)" -ForegroundColor Red
             exit 1
-          fi
+          }
