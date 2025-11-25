@@ -509,7 +509,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.DOCKER_USERNAME }}/cnpm-${{ matrix.service }}
+            cnpm-final-project-${{ matrix.service }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
