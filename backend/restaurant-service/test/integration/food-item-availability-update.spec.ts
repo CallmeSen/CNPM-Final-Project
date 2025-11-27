@@ -75,7 +75,7 @@ describe('Food Item Availability Update Without Transaction (Risk 8)', () => {
       restaurant: new ObjectId('507f1f77bcf86cd799439011'), // Same as mock guard
       name: 'Test Food Item',
       description: 'Test Description',
-      // price: 12.99,
+      price: 12.99,
       category: 'Test Category',
       availability: true,
       createdAt: new Date(),
