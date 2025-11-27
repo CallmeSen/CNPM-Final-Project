@@ -22,7 +22,7 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  const stripeWebhookPath = '/payment/webhook';
+  const stripeWebhookPath = '/api/payment/webhook';
 
   app.use(
     json({

@@ -13,7 +13,7 @@ import Stripe from 'stripe';
 import { PaymentService } from './payment.service';
 import { Payment } from '../schema/payment.schema';
 
-@Controller('api/payment')
+@Controller('payment')
 export class PaymentController {
   private readonly logger = new Logger(PaymentController.name);
   private readonly stripe: Stripe;

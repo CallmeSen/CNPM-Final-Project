@@ -9,7 +9,7 @@ import {
 import { Request, Response } from 'express';
 import { StripeService } from './stripe.service';
 
-@Controller('api/payment/webhook')
+@Controller('payment/webhook')
 export class WebhookController {
   constructor(private readonly stripeService: StripeService) {}
 
