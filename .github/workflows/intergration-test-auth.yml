@@ -1,4 +1,4 @@
-name: Integration Test Log
+name: Auth Service Integration Test
 
 on:
   push:
