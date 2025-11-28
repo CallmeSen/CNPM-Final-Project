@@ -110,6 +110,7 @@ describe('RISK-06: Duplicate payment intent creation race condition (Integration
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     configService = moduleFixture.get<ConfigService>(ConfigService);
 
     await app.init();

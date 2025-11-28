@@ -106,6 +106,7 @@ describe('RISK-07: Payment intent expiration handling (Integration)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     configService = moduleFixture.get<ConfigService>(ConfigService);
 
     await app.init();

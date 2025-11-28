@@ -56,6 +56,7 @@ describe('RISK-03: MongoDB connection failure during payment creation (Integrati
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     configService = moduleFixture.get<ConfigService>(ConfigService);
 
     await app.init();

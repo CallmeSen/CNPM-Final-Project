@@ -80,6 +80,7 @@ describe('RISK-08: Network timeout to order-service during status update (Integr
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     configService = moduleFixture.get<ConfigService>(ConfigService);
 
     // Mock axios to simulate timeout

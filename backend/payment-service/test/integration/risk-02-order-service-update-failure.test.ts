@@ -75,6 +75,7 @@ describe('RISK-02: Order-service update failure after payment success (Integrati
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     configService = moduleFixture.get<ConfigService>(ConfigService);
 
     // Mock axios to simulate failure

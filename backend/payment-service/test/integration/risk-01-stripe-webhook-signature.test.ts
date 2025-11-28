@@ -35,6 +35,7 @@ describe('RISK-01: Stripe webhook signature verification failure (Integration)',
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     configService = moduleFixture.get<ConfigService>(ConfigService);
     stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY')!, {
       apiVersion: '2023-10-16',

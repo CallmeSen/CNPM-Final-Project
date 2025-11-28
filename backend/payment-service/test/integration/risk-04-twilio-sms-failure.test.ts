@@ -81,6 +81,7 @@ describe('RISK-04: Twilio SMS sending failure (Integration)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api');
     configService = moduleFixture.get<ConfigService>(ConfigService);
 
     // Mock axios to simulate success
